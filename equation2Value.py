@@ -91,7 +91,7 @@ def final_initial_matrix(gp_table, cellToClusterDict):
 def convertInputMatrixToBinary(D_matrix):
     D_df = pd.read_csv(D_matrix, sep='\t', index_col=0)
     D_df = D_df.replace(2, 1)
-    D_df = D_df.replace(3, -2)
+    D_df = D_df.replace(3, np.nan)
     return D_df
 
 def findEtaValue(D_df, GDoublePrimeMatrix, cellToClusterDict):
@@ -128,6 +128,7 @@ def calculate_euclidean_distance(G, D):
 # G is G'' here
 def calculate_E(eta_coeff, lambda_coeff, sub_clones, G, D):
     distance = calculate_euclidean_distance(G, D)
+    print("Distance matrix shape ",distance.shape)
     # print('The eucliden disatnce between G_" and D is:'.format(distance))                                                                                                                                                                                                                                                                                                 
     print('The eucliden distance between G" and D is:', distance)
     l1_norm = np.linalg.norm(distance, 1)
@@ -174,5 +175,6 @@ print(GDoublePrimeDf)
 D_matrix_df = convertInputMatrixToBinary(args.input)
 eta = findEtaValue(D_matrix_df, GDoublePrimeDf, cellToClusterDict)
 print(eta)
+print(D_matrix_df.shape)
 
 e_value = calculate_E(eta, args.lambda_coeff, args.subclones, GDoublePrimeDf, D_matrix_df)
