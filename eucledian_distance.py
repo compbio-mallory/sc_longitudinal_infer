@@ -81,7 +81,7 @@ D: observed input matrix
 G": true genotype matrix
 """
 def calculate_euclidean_distance(G, D):
-    return nan_euclidean_distances(D, G)
+    return nan_euclidean_distances(G, D)
 
 """
 Function to calucalte E from equation2 in our writeup 
@@ -106,8 +106,12 @@ lambda_coeff = 0
 sub_clones = 1
 
 D = load_data('snv.tsv', '\t')
+#D = pd.read_csv('../scg/examples/snv.tsv', sep='\t', index_col=0)
+#print(D)
+#D = D.replace(3, np.nan)
+#D = D.replace(2, 1)
 print("D", D)
-G = load_data('GDoublePrimeDf.csv', ',')
+G = load_data('../Gyanendra_code/GDoublePrimeDf.csv', ',')
 print("G", G)
 
 calculate_E(eta_coeff, lambda_coeff, sub_clones, G, D)
@@ -134,6 +138,7 @@ zero_mask = np.less(D_squared, 0.0)
 D_squared[zero_mask] = 0.0
 distance_1 = np.sqrt(D_squared)
 print("Distance between A and B is:", distance_1)
-
+print(" ============== ")
+print("L1 norm ", np.linalg.norm(distance_1, 1))
 distance_2 = nan_euclidean_distances(A, B)
 print("Distance between A and B using sklearn", distance_2)
