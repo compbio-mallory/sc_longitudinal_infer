@@ -118,8 +118,11 @@ def findEtaValue(D_df, GDoublePrimeMatrix, cellToClusterDict):
                 FPcount = FPcount+1
             elif metric == "FN":
                 FNcount = FNcount+1
-    print(FPcount, " ",FNcount)
-    eta = 1 - FPcount - FNcount
+    print("FP count ",FPcount, " FN count ",FNcount)
+    FPrate = FPcount/D_df.size
+    FNrate = FNcount/D_df.size
+    print("FP rate ",FPrate, " FN rate ", FNrate)
+    eta = 1 - FPrate - FNrate
     return eta
 
 def calculate_euclidean_distance(G, D):
@@ -174,7 +177,7 @@ print(GDoublePrimeDf)
 
 D_matrix_df = convertInputMatrixToBinary(args.input)
 eta = findEtaValue(D_matrix_df, GDoublePrimeDf, cellToClusterDict)
-print(eta)
+print(" Eta value ",eta)
 print(D_matrix_df.shape)
 
 e_value = calculate_E(eta, args.lambda_coeff, args.subclones, GDoublePrimeDf, D_matrix_df)
