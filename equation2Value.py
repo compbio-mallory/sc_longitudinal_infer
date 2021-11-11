@@ -101,16 +101,20 @@ def findEtaValue(D_df, GDoublePrimeMatrix, cellToClusterDict):
         cell_list = []
         for col in GDoublePrimeMatrix.columns:
             #print(col)                                                                                                                                                                                                                                                                                                                                                     
-            if D_df.loc[cell][col] == GDoublePrimeMatrix.loc[cell][col].astype(int):
+            if D_df.loc[cell][col] == 1 and GDoublePrimeMatrix.loc[cell][col] == 1.0: #TP = true positive
                 cell_list.append("TP")
-            elif D_df.loc[cell][col] == 1 and GDoublePrimeMatrix.loc[cell][col] == 0.0:
+            elif D_df.loc[cell][col] == 1 and GDoublePrimeMatrix.loc[cell][col] == 0.0: # FP = false positive
                 cell_list.append("FP")
-            elif D_df.loc[cell][col] == 0 and GDoublePrimeMatrix.loc[cell][col] == 1.0:
+            elif D_df.loc[cell][col] == 0 and GDoublePrimeMatrix.loc[cell][col] == 1.0: # FN = false negative
                 cell_list.append("FN")
+            elif D_df.loc[cell][col] == 0 and GDoublePrimeMatrix.loc[cell][col] == 0.0: # TN = true negative
+                cell_list.append("TN")
         cellID_metrics[cell] = cell_list
 
     FPcount = 0
     FNcount = 0
+    TPcount = 0
+    TNcount = 0
     for cellID in cellID_metrics:
         metric_list = cellID_metrics[cellID]
         for metric in metric_list:
@@ -118,11 +122,15 @@ def findEtaValue(D_df, GDoublePrimeMatrix, cellToClusterDict):
                 FPcount = FPcount+1
             elif metric == "FN":
                 FNcount = FNcount+1
-    print("FP count ",FPcount, " FN count ",FNcount)
-    FPrate = FPcount/D_df.size
-    FNrate = FNcount/D_df.size
+            elif metric == "TP":
+                TPcount = TPcount+1
+            elif metric == "TN":
+                TNcount == TNcount+1
+    print("FP count ",FPcount, " FN count ",FNcount, " TP count ",TPcount, " TN count ",TNcount)
+    FPrate = FPcount/(FPcount+TPcount)
+    FNrate = FNcount/(FNcount+TNcount)
     print("FP rate ",FPrate, " FN rate ", FNrate)
-    eta = 1 - FPrate - FNrate
+    eta = 1 - (FPrate + FNrate)/2
     return eta
 
 def calculate_euclidean_distance(G, D):
