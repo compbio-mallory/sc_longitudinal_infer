@@ -30,13 +30,13 @@ def voting_algo(cell_SNV_list):
 ''' Function to get the G' matrix '''
 def build_GprimeMatrix(gp_table, final_matrix, cellToClusterDict):
     clusterToCellDict = {} # Building a dictionary with cluster IDs as keys and cell IDs as correspondig values
-    for key in cellToClusterDict:
-        clusterID = cellToClusterDict[key]
+    for cellID in cellToClusterDict:
+        clusterID = cellToClusterDict[cellID]
         if clusterID in clusterToCellDict:
             temp_list = clusterToCellDict[clusterID];
-            temp_list.append(key)
+            temp_list.append(cellID)
         else:
-            clusterToCellDict[clusterID] = [key]
+            clusterToCellDict[clusterID] = [cellID]
     #print(clusterToCellDict.keys())
     posSet = set(gp_table['event_id'])
 
@@ -66,13 +66,23 @@ def build_GDoublePrimeMatrix(gp_table, GprimeDf, cellToClusterDict):
     posSet = set(gp_table['event_id'])
     for cell in cellToClusterDict:
         clusterID = cellToClusterDict[cell]
-        for cluster, row in GprimeDf.iterrows():
+        for row in GprimeDf.itertuples():
+            cluster = row.Index
             if clusterID == str(cluster):
                 for pos in posSet:
                     if ':' not in pos:
                         continue
-                    SNV_value = row[pos]
+                    #SNV_value = getattr(row,pos)
+                    #SNV_value = row.pos
+                    SNV_value = GprimeDf.loc[cluster,pos]
                     GDoublePrimeDf.loc[cell,pos] = SNV_value
+        #for cluster, row in GprimeDf.iterrows():
+        #    if clusterID == str(cluster):
+        #        for pos in posSet:
+        #            if ':' not in pos:
+        #                continue
+        #            SNV_value = row[pos]
+        #            GDoublePrimeDf.loc[cell,pos] = SNV_value
     return GDoublePrimeDf
 
 ''' Function to build the initial matrix from the output of SCG. This will look similar to matrix D. '''
@@ -80,12 +90,17 @@ def final_initial_matrix(gp_table, cellToClusterDict):
     initial_matrix = pd.DataFrame()
     for cell in cellToClusterDict: # key is the Cell ID so we check for each cell ID its SNV types on a specific position
         clusterID = cellToClusterDict[cell]
-        for index, row in gp_table.iterrows(): 
-            if clusterID == str(index) and row['event_type'] == 'snv': # Choose the cluster the cell ID belongs to and get the position(event_id) and SNV(event_value) to fill the matrix
-                pos = row['event_id']
-                SNV = row['event_value']
-                #print("Event value .. ",event_value)
+        for row in gp_table.itertuples():
+            if clusterID == str(row.Index) and getattr(row,'event_type') == 'snv':
+                pos = getattr(row,'event_id')
+                SNV = getattr(row,'event_value')
                 initial_matrix.loc[cell,pos] = SNV
+        #for index, row in gp_table.iterrows(): 
+        #    if clusterID == str(index) and row['event_type'] == 'snv': # Choose the cluster the cell ID belongs to and get the position(event_id) and SNV(event_value) to fill the matrix
+        #        pos = row['event_id']
+        #        SNV = row['event_value']
+                #print("Event value .. ",event_value)
+        #        initial_matrix.loc[cell,pos] = SNV
     return initial_matrix
 
 def convertInputMatrixToBinary(D_matrix):
