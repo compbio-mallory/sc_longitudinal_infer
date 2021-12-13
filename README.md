@@ -8,6 +8,8 @@ For clustering we used SCG. Here are the steps to run SCG:
 The files generated are cluster_posteriors.tsv and genotype_posteriors.tsv. Unzip the * tsv.gz to get the recent results. 
 The cluster numbers can be changed in the config.yaml file. 
 
+Simulated time points for each cell is obtained from SCG clusters (no. of clusters 5) by running this file: timepoints_from_cluster.py.
+
 ---------------------------------------------------------------------------------------
 
 The Equation 2 is implemented in the file equation2Value.py and it accepts the following parameters as an input: the input data matrix, two output files from SCG (genotype_posterior.tsv and cluster_posterior.tsv), the lambda coefficient value and number of clusters. This file can be executed with the following command:
