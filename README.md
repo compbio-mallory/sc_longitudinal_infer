@@ -9,6 +9,8 @@ The files generated are cluster_posteriors.tsv and genotype_posteriors.tsv. Unzi
 The cluster numbers can be changed in the config.yaml file. 
 
 Simulated time points for each cell is obtained from SCG clusters (no. of clusters 5) by running this file: timepoints_from_cluster.py.
+Cells belonging to each clusters is obtained by running the file: cellToCluster.py. A json file is returned which contains the information and this file is used by 
+equation2Value.py to get the information. (can change this later)
 
 ---------------------------------------------------------------------------------------
 
