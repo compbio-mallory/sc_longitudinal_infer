@@ -22,6 +22,7 @@ Simulated input for the longitudinal tree can be obtained by running the followi
 python input_for_tree.py -input ./examples/example_input_D.tsv -gp ./examples/example_genotype_posterior.tsv -cellCluster ./examples/example_cellToCluster.json -timepoints ./examples/example_cell_timepoints.json
 
 Inputs required: an input D matrix, genotype_posterior file similar to output of SCG, cells assigned to clusters information in example_cellToCluster.json and the cell timepoints mentioned in example_cell_timepoints.json.
+
 Output: a json file containing subclones arranged in timepoints. This output can be used as an input for the longitudinal tree algorithm.
 
 ---------------------------------------------------------------------------------------
