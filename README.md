@@ -35,6 +35,12 @@ Please replace it with corresponding path, file names and parameters.
 
 ---------------------------------------------------------------------------------
 
-To run the Longitudinal Tree program use the following command: python longitudinalTree.py -input example_InputGprime.tsv
+Longitudinal Tree program accepts both matrix as tsv and a json as an input. To run the Longitudinal Tree program with a matrix as input use the following command:
+
+python longitudinalTree.py -input ./examples/example_InputGprime.tsv -inputType matrix
+
+To run with a dictionary(json) where subclones are already arranged in timepoints use the following command:
+
+python longitudinalTree.py -input ./examples/simulated_input_tree.json -inputType dict
 
 The inputs folder has example inputs example_InputGprime.tsv and example_InputGprime_1.tsv to execute and test the implementation.
