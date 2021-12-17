@@ -294,8 +294,9 @@ def forward_mutation_one(tree_with_children,unobserved_sc_tree):
 
 ''' This part searches for unconnected nodes in t+1 (u) and connect them to a node in t (v).'''
 def forward_mutation_two(tree_with_children, unobserved_sc_tree):
+    # The following lines searches if any node in t+1 is unconnected to any node in t.
     check_if_node_exists_list = []
-    children_list = []
+    children_list = [] # This keeps count if node in t+1 is present as children of any nodes in t. 
     for node_t in unobserved_sc_tree:
         t_children = tree_with_children[node_t]
         if t_children == []:
@@ -325,33 +326,126 @@ def forward_mutation_two(tree_with_children, unobserved_sc_tree):
     for lone_node in check_if_node_exists_list: # Adding node u and node v in this loop prior to checking subsets.
         t1_k1 = lone_node.split('_')[1]
         max_mutations = 0
+        t1_snv_set = set(unobserved_sc_tree[lone_node])
         for t_node in unobserved_sc_tree:
             if t_node == lone_node:
                 continue
             t_node_children = tree_with_children[t_node]
-            if 'usc' in t_node or t_node_children == [] or lone_node in t_node_children:
+            if 'usc' in t_node or lone_node in t_node_children:
                 continue
             t_k = t_node.split('_')[1]
             if int(t_k)+1 == int(t1_k1):
-                snv_count = len(unobserved_sc_tree[t_node])
-                if snv_count > max_mutations:
-                    max_mutations = snv_count
-                    node_u_v[lone_node] = t_node
+                t_snv_set = set(unobserved_sc_tree[t_node])
+                if t1_snv_set != t_snv_set and t_snv_set.issubset(t1_snv_set):
+                    snv_count = len(t_snv_set)
+                    if max_mutations == 0:
+                        max_mutations = snv_count
+                        node_u_v[lone_node] = t_node
+                    elif snv_count >= max_mutations:
+                        max_mutations = snv_count
+                        node_u_v[lone_node] = t_node
 
     print(" Node_u_v ",node_u_v)
-    u_v_conn = {}
-    for node_u in node_u_v: # Checking if mutations in node v is a proper subset of mutations in node u.
-        node_v = node_u_v[node_u]
-        node_u_snv_set = set(unobserved_sc_tree[node_u])
-        node_v_snv_set = set(unobserved_sc_tree[node_v])
-        if(node_u_snv_set != node_v_snv_set and node_v_snv_set.issubset(node_u_snv_set)):
-            u_v_conn[node_u] = node_v
+    return node_u_v
 
-    print(" Node_v_u ",u_v_conn)
-    return u_v_conn
+''' This method evaluates the cluster to check if any mutation is missed at a time point and then later added at another time.
+This is a clustering error which we want to detect.'''
+def evaluate_clustering(tree_with_children, unobserved_sc_tree):
+    cluster_mistake = 0
+    print(" Evaluating cluster =============== ")
+    for node_t in unobserved_sc_tree:
+        if 'usc' in node_t: # only consider the observed subclones in this time 
+            continue
+        t_node_snv = unobserved_sc_tree[node_t] # note the mutations in time t
+        t_node_children = tree_with_children[node_t] # checking if the nodes are connected
+        t_k = node_t.split('_')[1]
+        s = 2 # this variable will help to check in time point >=2 of current time point
+        for node_t1 in unobserved_sc_tree:
+            if node_t == node_t1:
+                continue
+            t1_k1 = node_t1.split('_')[1]
+            if int(t_k)+s > int(t1_k1):
+                continue
+            #print(t1_k1+" "+t_k+" "+str(s))
+            if int(t1_k1) == int(t_k)+s: #checking in s>=2 time point
+                #print(" Node t1 ",node_t1)
+                t1_node_snv = unobserved_sc_tree[node_t1]
+                #print(" t node SNV ",t_node_snv," t1 node SNV ",t1_node_snv)
+                if (t_node_children == [] and set(t_node_snv) == set(t1_node_snv)): # the t node should be unconnected and similar to another node in another time point
+                    cluster_mistake = cluster_mistake+1
+                    #print("Cluster mistake ",cluster_mistake)
+        s = s+1
+    return cluster_mistake
+    #print(" Evaluating cluster ",cluster_mistake)
+    
+''' This method looks for back mutations, connects the nodes(x,y) and records the edges. '''
+def back_mutation(tree_with_children, unobserved_sc_tree):
+    # The following lines searches if any node in t+1 is unconnected to any node in t.
+    print("Back mutation steps =======================")
+    check_if_node_exists_list = []
+    children_list = []
+    for node_t in unobserved_sc_tree:
+        t_children = tree_with_children[node_t]
+        if t_children == []:
+            continue
+        #print(" Node t child ",t_children)
+        t_k = node_t.split('_')[1]
+        for node_t1 in unobserved_sc_tree:
+            if node_t == node_t1:
+                continue
+            t1_k1 = node_t1.split('_')[1]
+            if int(t_k)+1 == int(t1_k1):
+                #print(" Node t1 ",node_t1) 
+                if len(check_if_node_exists_list) != 0:
+                    for node in check_if_node_exists_list:
+                        if node in t_children:
+                            check_if_node_exists_list.remove(node)
+                if node_t1 not in t_children and node_t1 not in children_list:
+                    check_if_node_exists_list.append(node_t1)
+                if node_t1 in t_children:
+                    children_list.append(node_t1)
+    print(check_if_node_exists_list)
+    if check_if_node_exists_list == []: # Nothing else to do if all nodes are already connected. 
+        return None
 
+    node_x_y = {}
+    check_if_node_exists_set = set(check_if_node_exists_list)
+    for lone_node in check_if_node_exists_set: # Adding node x and node y in this loop prior to checking supersets.
+        t1_k1 = lone_node.split('_')[1]
+        min_mutations = 0
+        print(" Lone node in t+1 ", lone_node)
+        t1_snv_set = set(unobserved_sc_tree[lone_node])
+        for t_node in unobserved_sc_tree:
+            if t_node == lone_node:
+                continue
+            t_node_children = tree_with_children[t_node]
+            if 'usc' in t_node or lone_node in t_node_children:
+                continue
+            t_k = t_node.split('_')[1]
+            if int(t_k)+1 == int(t1_k1):
+                print(" t node : ",t_node," its children ",t_node_children)
+                t_snv_set = set(unobserved_sc_tree[t_node])
+                if t1_snv_set != t_snv_set and t_snv_set.issuperset(t1_snv_set):
+                    snv_count = len(t_snv_set) # need to check the snv count here
+                    print(" SNV count ",snv_count)
+                    if min_mutations == 0:
+                        min_mutations = snv_count # Initially first value are minimum
+                        print(" Min mutations ",min_mutations)
+                        node_x_y[lone_node] = t_node # keeping the same key so that new connection gets updated.
+                    elif snv_count < min_mutations:
+                        min_mutations = snv_count # Choosing the minimum value
+                        print(" Min mutations ",min_mutations)
+                        node_x_y[lone_node] = t_node
+                    elif snv_count == min_mutations:
+                        min_mutations = snv_count # if two same values exist then choose randomly
+                        print(" Min mutations ",min_mutations)
+                        node_x_y[lone_node] = t_node
+
+    print(" Node_x_y ",node_x_y)
+    return node_x_y
+    
 ''' Method to update the longitudinal tree with the nodes. ''' 
-def update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_dict, u_v_conn):
+def update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_dict, u_v_conn, x_y_conn):
     # Update unobserved_sc_tree by removing nodes_to_remove and adding values from nodes_to_add_dict.
     # Then call construct_tree function to get the tree with updated nodes.
     # Then add u_v_conn nodes to the constructed tree.
@@ -368,21 +462,38 @@ def update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_d
 
     print(" After adding and deleting node ",temp_sc_tree)
     updated_tree = construct_tree(temp_sc_tree)
-    if u_v_conn == {} or u_v_conn == None:
+    if (u_v_conn == {} or u_v_conn == None) and (x_y_conn == {} or x_y_conn == None):
         return updated_tree
     else:
+        # check for u_v_conn and x_y_conn
         updated_tree_copy = updated_tree.copy()
-        for u_v in u_v_conn:
-            updated_tree_copy[u_v] = u_v_conn[u_v]
-        return updated_tree
+        if(u_v_conn != {} or u_v_conn != None):
+            for u_v in u_v_conn:
+                u_v_key = u_v_conn[u_v]
+                updated_tree_copy[u_v_key] = [u_v]
+        if(x_y_conn != {} or x_y_conn != None):
+            for x_y in x_y_conn:
+                print("Updating Back mutation tree ",x_y)
+                t_node_key = x_y_conn[x_y]
+                updated_tree_copy[t_node_key] = [x_y]
+        return updated_tree_copy
     
 parser = argparse.ArgumentParser()
 parser.add_argument("-input", "--input",dest ="input", help="Input matrix (Input to the Longitudinal tree)")
+parser.add_argument("-inputType", "--inputType",dest="inputType", help="Input type can be matrix or dict")
 args = parser.parse_args()
-tsv_input = args.input
 
-inputToTree = convertToPandas(tsv_input)
-clones_in_time = convert_InputToDict(inputToTree)
+input_type = args.inputType
+if input_type == 'matrix':
+    tsv_input = args.input
+    inputToTree = convertToPandas(tsv_input) # accept input as both matrix and dictionary. Prefer using dictionary.
+    clones_in_time = convert_InputToDict(inputToTree)
+elif input_type == 'dict':
+    json_input = args.input
+    with open(json_input) as json_file:
+        dict_input = json.load(json_file)
+    clones_in_time = OrderedDict(dict_input)
+    
 print("Step 1 to get the clones arranged ... ",clones_in_time)
 unobserved_sc_tree = find_unobserved_subclones(clones_in_time)
 
@@ -392,8 +503,14 @@ print(" Tree with children ",tree_with_children)
 #print(" Tree with edge weights ",edge_weight_dict)
 nodes_to_remove, nodes_to_add_dict = forward_mutation_one(tree_with_children, unobserved_sc_tree)
 u_v_conn = forward_mutation_two(tree_with_children, unobserved_sc_tree)
-updated_tree = update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_dict, u_v_conn)
+
+# the method for counting clustering algo mistake before back mutation goes here.
+cluster_mistake = evaluate_clustering(tree_with_children, unobserved_sc_tree)
+
+x_y_conn = back_mutation(tree_with_children, unobserved_sc_tree) # consider this as the back mutation edges collection to analyze later
+updated_tree = update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_dict, u_v_conn, x_y_conn)
 print("Updated Longitudinal tree ",updated_tree)
+
 #left = Tree("left","left_data")
 #middle = Tree("middle","middle_data")
 #right = Tree("right","right_data")
