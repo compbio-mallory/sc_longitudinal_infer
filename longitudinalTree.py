@@ -80,32 +80,60 @@ def validate_subclones(temp_sc, dict_For_tree):
                     #            print("**********",temp_dict)
     return temp_dict
 
+''' Dictionary to record the subclones for each timepoints.'''
+def timepoint_subclones(dict_For_tree):
+    new_dict={}
+    for key in dict_For_tree:
+        time_index = key.split('_')[1]
+        key_list = []
+        new_dict_key = "t_"+time_index
+        for key2 in dict_For_tree:
+            if new_dict_key in key2:
+                if new_dict_key in new_dict:
+                    temp_list = list(new_dict[new_dict_key])
+                    temp_list.append(key2)
+                    new_dict[new_dict_key] = set(temp_list)
+                else:
+                    key_list.append(key2)
+                    new_dict[new_dict_key] = set(key_list)
+    return new_dict
+
 ''' Find the unobserved subclones. '''
 def find_unobserved_subclones(dict_For_tree):
     temp_unobserved_sc = {} # will save all subsets here and separate them later with the function validate_subclones()
+    t_subclones = timepoint_subclones(dict_For_tree)
+    #print("Timepoint subclones ... ==============")
+    #print(t_subclones)
     for key1 in dict_For_tree: # iterating through input_tree. Remember keys here are combination of time and cluster.
         time_point_k = key1.split('_')[1] # we just want to get the times and not the whole key (ex. t_1_c1)
         set_1 =	set(dict_For_tree[key1]) # set_1 indicates the SNVs in a given time and cluster 
-        print("key 1 ",key1," length of subset ",len(set_1))
-        print(" =========================== ")
-        for key2 in dict_For_tree: # comparing subclones of two times pairwise to find subsets.
+        #print("key 1 ",key1," length of subset ",len(set_1))
+        #print(" =========================== ")
+        t1_time_point = int(time_point_k)+1
+        if "t_"+str(t1_time_point) in t_subclones:# condition to check only between t_1 and t_2 and not between t_1 and t_3. Maintaining the time stepwise.
+            t1_level_keys = t_subclones["t_"+str(t1_time_point)]
+            #print("t1_level_key ... ",t1_level_keys)
+        else:
+            continue
+        for key2 in t1_level_keys: # comparing subclones of two times pairwise to find subsets.
             if key1 == key2:
                 continue
-            time_point_k1 = key2.split('_')[1]
-            if int(time_point_k)+1 == int(time_point_k1): # condition to check only between t_1 and t_2 and not between t_1 and t_3. Maintaining the time stepwise.
+            #time_point_k1 = key2.split('_')[1]
+            #if int(time_point_k)+1 == int(time_point_k1): # condition to check only between t_1 and t_2 and not between t_1 and t_3. Maintaining the time stepwise.
                 #print("Key 2 ",key2)
-                set_2 = set(dict_For_tree[key2]) # set_2 indicates the SNVs in t+1 and each cluster in t+1
-                #print(" Set 2 ",set_2)
-                if(set_1 != set_2 and set_1.issubset(set_2)): #checking proper subsets
-                    usc = find_subsets(set_1,set_2, len(set_2)-1) # find all the subsets for a matching subclone
-                    #print(" Unobserved subsets ",usc)
-                    temp_unobserved_sc_key = 't_'+time_point_k
-                    if temp_unobserved_sc_key not in temp_unobserved_sc: # This if else statement is to add list of subsets in a particular time. (ex. subsets between t_1 and t_2) 
-                        temp_unobserved_sc[temp_unobserved_sc_key] = usc
-                    else:
-                        temp_sc = temp_unobserved_sc[temp_unobserved_sc_key]
-                        temp_sc.extend(usc)
-                        temp_unobserved_sc[temp_unobserved_sc_key] = temp_sc
+            set_2 = set(dict_For_tree[key2]) # set_2 indicates the SNVs in t+1 and each cluster in t+1
+            #print(" Set 2 ",set_2)
+            if(set_1 != set_2 and set_1.issubset(set_2)): #checking proper subsets
+                usc = find_subsets(set_1,set_2, len(set_2)-1) # find all the subsets for a matching subclone
+                #print(" Unobserved subsets ",usc)
+                temp_unobserved_sc_key = 't_'+time_point_k
+                #print(" Unobserved subsets key ",temp_unobserved_sc_key)
+                if temp_unobserved_sc_key not in temp_unobserved_sc: # This if else statement is to add list of subsets in a particular time. (ex. subsets between t_1 and t_2) 
+                    temp_unobserved_sc[temp_unobserved_sc_key] = usc
+                else:
+                    temp_sc = temp_unobserved_sc[temp_unobserved_sc_key]
+                    temp_sc.extend(usc)
+                    temp_unobserved_sc[temp_unobserved_sc_key] = temp_sc
             else:
                 continue
             
@@ -144,18 +172,44 @@ def convert_InputToDict(input_df):
 def del_edges(unobserved_sc_tree, tree_with_children):
     # Compare the SNVs from the nodes and connect the same nodes first.
     # Then check if any node is connected to unobserved node and update other connections.
+    #print("Tree present in del_edges .. ======")
+    #print(unobserved_sc_tree)
     updated_tree_children = {}
+    connected_children = []
+    usc_nodes_to_ignore = []
+
+    # This portion only checks removal of remaining unnecessary usc nodes and preserving only ones required.
+    for k_time in tree_with_children:
+        k_time_child = tree_with_children[k_time]
+        k_time_key_values = k_time.split('_')
+        if k_time not in usc_nodes_to_ignore and len(k_time_key_values) == 4:
+            k_time_index = k_time_key_values[1]
+            for k1_time in tree_with_children:
+                if k_time == k1_time:
+                    continue
+                k1_time_key_values = k1_time.split('_')
+                k1_time_index = k1_time_key_values[1]
+                if len(k1_time_key_values) == 4 and k_time_index == k1_time_index:
+                    if k_time_child == tree_with_children[k1_time]:
+                        print("Same children !!! ")
+                        updated_tree_children[k_time] = tree_with_children[k_time]
+                        #usc_nodes_to_ignore.append(k_time)
+                        usc_nodes_to_ignore.append(k1_time)
+
     for k_time in tree_with_children:
         k_time_child = tree_with_children[k_time]
         parent_snv = unobserved_sc_tree[k_time]
         child_list = []
+        if k_time_child == []: # preserving the nodes without any children
+            updated_tree_children[k_time] = k_time_child
         #print(" Building delete ecges ... ",k_time_child)
         for child in k_time_child:
             child_snv = unobserved_sc_tree[child]
             if 'usc' not in child and parent_snv == child_snv: # checking for same nodes here. If same nodes present then connect them.
                 child_list.append(child)
+                connected_children.append(child)
                 updated_tree_children[k_time] = child_list
-            elif 'usc' in child: # checking unobserved subclones and preserving their connections.
+            elif child not in usc_nodes_to_ignore and 'usc' in child: # checking unobserved subclones and preserving their connections.
                 #print(" k time ",k_time," child ",child)
                 if k_time in updated_tree_children:
                     temp_child_list = updated_tree_children[k_time]
@@ -164,8 +218,17 @@ def del_edges(unobserved_sc_tree, tree_with_children):
                 else:
                     child_list.append(child)
                     updated_tree_children[k_time] = child_list
-        if k_time not in updated_tree_children and 'usc' in k_time: # preserving unobserved subclones that didn't occur before.
-            updated_tree_children[k_time] = tree_with_children[k_time]
+
+        #print("USC nodes to ignore ",usc_nodes_to_ignore)
+        if (k_time not in usc_nodes_to_ignore and k_time not in updated_tree_children and 'usc' in k_time): # preserving unobserved subclones that didn't occur before and removing already connected children (i.e. same nodes).
+            usc_child = tree_with_children[k_time]
+            for child in connected_children:
+                if child in usc_child:
+                    print("USc time with child  --->> ",k_time," ",child)
+                    usc_child.remove(child)
+            #print(" Usc time node preserved ------>> ",k_time)
+            if usc_child != []:
+                updated_tree_children[k_time] = usc_child
     return updated_tree_children
                 
 ''' Construct a tree as dictionary where nodes are the keys and their corresponding children nodes are values. '''
@@ -184,10 +247,12 @@ def construct_tree(unobserved_sc_tree):
             time_point_k1 = k1_time.split('_')[1]
             #k1_time_node = Tree(k1_time, unobserved_sc_tree[k1_time],tree_dict)
             if int(time_point_k)+1 == int(time_point_k1): #checking neighboring time points
+                if 'usc' in k1_time:
+                    continue
                 k1_time_value = set(unobserved_sc_tree[k1_time])
                 if(k_time_value.issubset(k1_time_value)):
                     k_time_children.append(k1_time)
-            elif(int(time_point_k) == int(time_point_k1) and 'usc' in k1_time): #checking unobserved subclones here
+            if(int(time_point_k) == int(time_point_k1) and 'usc' in k1_time): #checking unobserved subclones here
                 k1_time_value = set(unobserved_sc_tree[k1_time])
                 if(k_time_value.issubset(k1_time_value)):
                     k_time_children.append(k1_time)
@@ -243,6 +308,9 @@ def del_nodes(s_node, node_list):
 def select_A_bar(tree_with_children, t1, s_node):
     A_bar_nodes = []
     s_node_children = tree_with_children[s_node]
+    #s_node_index = s_node.split('_')[1]
+    #t1_index = int(s_node_index)+1
+    print("Inside select_A_bar .. s_node children ",s_node," ---- >",s_node_children," t1 ",t1)
     for node in tree_with_children:
         if t1 in node:
             if node not in s_node_children and 'usc' not in node:
@@ -256,9 +324,10 @@ def enroll_unobservedSc(s_node, A_bar, tree_with_children, unobserved_sc_tree):
     new_t1_nodes = [] # union of s_node and A_bar. Or just s_node when A_bar is empty.
     new_t1_nodes_dict = {}
     t_nodes_dict = {}
+    t_usc_nodes_dict = {}
     nodes_to_add = {}
 
-    print(" S node is ",s_node," A bar nodes are ",A_bar)
+    #print(" S node is ",s_node," A bar nodes are ",A_bar)
     if len(A_bar) != 0:
         new_t1_nodes.append(s_node)
         new_t1_nodes.extend(A_bar)
@@ -272,6 +341,8 @@ def enroll_unobservedSc(s_node, A_bar, tree_with_children, unobserved_sc_tree):
     for node in unobserved_sc_tree: #Taking only the nodes in time t
         if "t_"+t_k in node and 'usc' not in node:
             t_nodes_dict[node] = unobserved_sc_tree[node]
+        elif "t_"+t_k in node and 'usc' in node:
+            t_usc_nodes_dict[node] = unobserved_sc_tree[node]
 
     usc_count = 0
     for t_node in t_nodes_dict:
@@ -286,6 +357,7 @@ def enroll_unobservedSc(s_node, A_bar, tree_with_children, unobserved_sc_tree):
                     key = s_node+"_usc"+str(usc_count)
                     #print("Nodes to add key ",key) #checking below that the node is only proper subset and proper superset
                     if t_node_snv != set(sc) and t_node_snv.issubset(set(sc)) and t1_node_snv != set(sc) and t1_node_snv.issuperset(set(sc)):
+                        #print("t_node_snv ",t_node_snv," subset snv ",sc," t1_node_sc ",t1_node_snv)
                         nodes_to_add[key] = sc
     
     #print("New t1 nodes ",new_t1_nodes)
@@ -310,7 +382,7 @@ def forward_mutation_one(tree_with_children,unobserved_sc_tree):
         #print(s_node) # Check if this is empty before further operations.
         if del_nodes(s_node, usc_list) != []:
             nodes_to_remove.extend(del_nodes(s_node, usc_list))
-        print("Nodes to remove ",set(nodes_to_remove)) # Check always if a node is in this list before further operations.
+        #print("Nodes to remove ",set(nodes_to_remove)) # Check always if a node is in this list before further operations.
         
         t_k = node_t.split('_')[1]
         for node_t1 in tree_with_children:
@@ -333,12 +405,16 @@ def forward_mutation_two(tree_with_children, unobserved_sc_tree):
     check_if_node_exists_list = []
     children_list = [] # This keeps count if node in t+1 is present as children of any nodes in t. 
     for node_t in unobserved_sc_tree:
+        if 'usc' in node_t:
+            continue
         t_children = tree_with_children[node_t]
         if t_children == []:
             continue
         #print(" Node t child ",t_children)
         t_k = node_t.split('_')[1]
         for node_t1 in unobserved_sc_tree:
+            if 'usc' in node_t1:
+                continue
             if node_t == node_t1:
                 continue
             t1_k1 = node_t1.split('_')[1]
@@ -420,12 +496,16 @@ def back_mutation(tree_with_children, unobserved_sc_tree):
     check_if_node_exists_list = []
     children_list = []
     for node_t in unobserved_sc_tree:
+        if 'usc' in node_t:
+            continue
         t_children = tree_with_children[node_t]
         if t_children == []:
             continue
         #print(" Node t child ",t_children)
         t_k = node_t.split('_')[1]
         for node_t1 in unobserved_sc_tree:
+            if 'usc' in node_t1:
+                continue
             if node_t == node_t1:
                 continue
             t1_k1 = node_t1.split('_')[1]
@@ -439,7 +519,7 @@ def back_mutation(tree_with_children, unobserved_sc_tree):
                     check_if_node_exists_list.append(node_t1)
                 if node_t1 in t_children:
                     children_list.append(node_t1)
-    print(check_if_node_exists_list)
+    print("Check if back mutation node exists ",check_if_node_exists_list)
     if check_if_node_exists_list == []: # Nothing else to do if all nodes are already connected. 
         return None
 
@@ -465,15 +545,15 @@ def back_mutation(tree_with_children, unobserved_sc_tree):
                     print(" SNV count ",snv_count)
                     if min_mutations == 0:
                         min_mutations = snv_count # Initially first value are minimum
-                        print(" Min mutations ",min_mutations)
+                        #print(" Min mutations ",min_mutations)
                         node_x_y[lone_node] = t_node # keeping the same key so that new connection gets updated.
                     elif snv_count < min_mutations:
                         min_mutations = snv_count # Choosing the minimum value
-                        print(" Min mutations ",min_mutations)
+                        #print(" Min mutations ",min_mutations)
                         node_x_y[lone_node] = t_node
                     elif snv_count == min_mutations:
                         min_mutations = snv_count # if two same values exist then choose randomly
-                        print(" Min mutations ",min_mutations)
+                        #print(" Min mutations ",min_mutations)
                         node_x_y[lone_node] = t_node
 
     print(" Node_x_y ",node_x_y)
@@ -489,17 +569,18 @@ def update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_d
     print(" Nodes to add ",nodes_to_add_dict)
     for node in nodes_to_remove:
         if node in temp_sc_tree:
-            print("Node to del ",node)
+            #print("Node to del ",node)
             del temp_sc_tree[node]
 
-    for key in nodes_to_add_dict:
+    for key in nodes_to_add_dict: # Add checks here to prune too many unobserved subclones. Randomly select unobserved subclones if same connections.     
         temp_sc_tree[key] = nodes_to_add_dict[key]
 
     print(" After adding and deleting node ",temp_sc_tree)
     updated_tree = construct_tree(temp_sc_tree)
-    filtered_tree = del_edges(unobserved_sc_tree, updated_tree) # This removes all unnecessary edges.
+    filtered_tree = del_edges(temp_sc_tree, updated_tree) # This removes all unnecessary edges.
     print(" Filtered Tree ",filtered_tree)
-    if (u_v_conn == {} or u_v_conn == None) and (x_y_conn == {} or x_y_conn == None):
+    #print(" Updated tree ",updated_tree)
+    if (u_v_conn == {} or u_v_conn == None) or (x_y_conn == {} or x_y_conn == None):
         return filtered_tree
     else:
         # check for u_v_conn and x_y_conn
@@ -534,6 +615,7 @@ elif input_type == 'dict':
 print("Step 1 to get the clones arranged ... ",clones_in_time)
 unobserved_sc_tree = find_unobserved_subclones(clones_in_time)
 
+print("==============================================")
 tree_with_children = construct_tree(unobserved_sc_tree)
 print(" Tree with children ",tree_with_children)
 
@@ -546,6 +628,7 @@ u_v_conn = forward_mutation_two(tree_with_children, unobserved_sc_tree)
 
 # the method for counting clustering algo mistake before back mutation goes here.
 cluster_mistake = evaluate_clustering(tree_with_children, unobserved_sc_tree)
+print(" Cluster mistakes ",cluster_mistake)
 
 x_y_conn = back_mutation(tree_with_children, unobserved_sc_tree) # consider this as the back mutation edges collection to analyze later
 updated_tree = update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_dict, u_v_conn, x_y_conn)
