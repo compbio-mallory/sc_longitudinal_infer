@@ -44,3 +44,23 @@ To run with a dictionary(json) where subclones are already arranged in timepoint
 python longitudinalTree.py -input ./examples/simulated_input_tree.json -inputType dict
 
 The inputs folder has example inputs example_InputGprime.tsv and example_InputGprime_1.tsv to execute and test the implementation.
+
+-----------------------------------------------------------------------------------
+
+<u> Steps to run experiments on LACE Breast cancer real data: <u> 
+
+1. Scripts to prepare the data for testing from Rdata to json or CSV can be found in /gpfs/research/fangroup/rk18g/longitudinal/ and steps are explained in the processData.txt (two files to run: convertRToCSV.R and convertRToJson.R)
+2. Check any of the folders starting with lace_data_exp* inside /gpfs/research/fangroup/rk18g/longitudinal/SCG_Roth/Gyanendra_code/
+3. We have the input files as merged.tsv and should run the following set of commands in sequence from inside the folder lace_data_exp*:
+  
+   python save_multipleSCGresults.py -input merged.tsv.gz -cluster_list 5 6 7 8 9 10 -scg_config ../../../SCG_Roth/scg/examples/config.yaml -niters 10 (Run this file from the SCG conda environment)
+  
+  python chooseMinVal_Eq2.py -input merged.tsv.gz -lambda_coeff 0.2
+
+  Next get the timepoints for each cell using the following script:
+/gpfs/research/fangroup/rk18g/longitudinal/prepare_dataForClustering.py
+
+  python input_for_tree.py -input merged.tsv.gz -gp ./scg_clusterNo_5_iter_6/genotype_posteriors.tsv.gz -cellCluster ./scg_clusterNo_5_iter_6/cellToCluster.json -timepoints lace_real_data_tp_1.json -output inputForLongitudinalTree.json
+
+  python longitudinalTree.py -input inputForLongitudinalTree.json -inputType dict
+
