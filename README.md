@@ -31,7 +31,9 @@ The Equation 2 is implemented in the file equation2Value.py and it accepts the f
 
 python equation2Value.py -input ../scg/examples/snv.tsv -gp ../no_doublet/genotype_posteriors.tsv -cp ../no_doublet/cluster_posteriors.tsv -lambda_coeff 0.2 -subclones 40
 
-Please replace it with corresponding path, file names and parameters.
+Please replace it with corresponding path, file names and parameters. 
+
+UPDATE: The folders LACE_DATA_EXP* has the correct and updated equation2Value.py.
 
 ---------------------------------------------------------------------------------
 
@@ -46,6 +48,10 @@ python longitudinalTree.py -input ./examples/simulated_input_tree.json -inputTyp
 The inputs folder has example inputs example_InputGprime.tsv and example_InputGprime_1.tsv to execute and test the implementation.
 
 -----------------------------------------------------------------------------------
+
+To test with the simulated data or examples created by us run the scripts in this folder: our_simData_exp
+
+------------------------------------------------------------------------------------
 
 <u> Steps to run experiments on LACE Breast cancer real data: <u> 
 
