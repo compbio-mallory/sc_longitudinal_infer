@@ -32,7 +32,7 @@ def final_initial_matrix(gp_table, cellToClusterDict):
     for cell in cellToClusterDict: # key is the Cell ID so we check for each cell ID its SNV types on a specific position                                                                                   
         clusterID = cellToClusterDict[cell]
         for row in gp_table.itertuples():
-            if clusterID == str(row.Index) and getattr(row,'event_type') == 'snv':
+            if clusterID == str(row.Index) and getattr(row,'event_type') == 'snv' and getattr(row,'probability') > 0.80:
                 pos = getattr(row,'event_id')
                 chromPosList.append(pos)
                 SNV = getattr(row,'event_value')
@@ -46,7 +46,7 @@ def final_initial_matrix(gp_table, cellToClusterDict):
     print(" Set values for chrom pos ",set(chromPosList))
     chromPosToInt_dict = chromPosToIntDict(set(chromPosList),initial_matrix)
     initial_matrix.rename(columns=chromPosToInt_dict, inplace=True) # rename chrom pos with simple numbers for testing.
-    return initial_matrix.fillna(0)
+    return initial_matrix.fillna(0),chromPosToInt_dict
 
 ''' returns the voted SNV with the values 0,1,2'''
 def voting_algo(cell_SNV_list):
@@ -64,7 +64,7 @@ def voting_algo(cell_SNV_list):
         return 0
     
 ''' Function to get the G' matrix '''
-def build_GprimeMatrix(gp_table, final_matrix, cellToClusterDict):
+def build_GprimeMatrix(gp_table, final_matrix, chromPosToInt_dict, cellToClusterDict):
     clusterToCellDict = {} # Building a dictionary with cluster IDs as keys and cell IDs as correspondig values                                                                                            
     for cellID in cellToClusterDict:
         clusterID = cellToClusterDict[cellID]
@@ -77,22 +77,17 @@ def build_GprimeMatrix(gp_table, final_matrix, cellToClusterDict):
     #posSet = set(gp_table['event_id']) # This was before converting the chrom pos to numbers.
     posSet = final_matrix.columns.values.tolist()
     GprimeDf = pd.DataFrame()
-    # Below code builds the matrix with cluster IDs as indices and positions as columns.                                                                                                                   
-    # Fills it up with voted SNV values after creating a list with the SNV values for each cell ID.                                                                                                         
     for cluster in clusterToCellDict:
-        cell_SNV_list = []
-        for pos in posSet:
-            #if ':' not in pos:
-            #    continue
-            for cell in clusterToCellDict[cluster]:
-                temp_value = final_matrix.loc[cell][pos].astype(str)
-                #print(temp_value)                                                                                                                                                                         
-                #print(temp_value.split()[1])                                                                                                                                                              
-                cell_SNV_list.append(temp_value)
-            #Include voting results here                                                                                                                                                                   
-            voted_SNV = voting_algo(cell_SNV_list)
-            GprimeDf.loc[cluster,pos] = voted_SNV
-            #print("SNV list ::",cell_SNV_list)                                                                                                                                                            
+        for row in gp_table.itertuples():
+            if cluster == str(row.Index) and getattr(row,'event_type') == 'snv' and getattr(row,'probability') > 0.80:
+                #prob = getattr(row,'probability')
+                #if math.ceil(prob) == 1:
+                    pos = getattr(row,'event_id')
+                    SNV = getattr(row,'event_value')
+                    if SNV == 2.0:
+                        SNV = 1.0
+                    GprimeDf.loc[cluster,pos] = SNV
+    GprimeDf.rename(columns=chromPosToInt_dict, inplace=True) # rename chrom pos with simple numbers for testing.
     return GprimeDf, posSet
 
 ''' Getting all the SNVs of cells.'''
@@ -199,14 +194,17 @@ for cellId in cellToClusterDict:
 
 #print(clusterToCellDict)
 
-initial_matrix=final_initial_matrix(gp_table, cellToClusterDict) # Populated matrix similar to D                                                                                                              
+initial_matrix, chromPosToInt_dict = final_initial_matrix(gp_table, cellToClusterDict) # Populated matrix similar to G''                                                                                                              
 print("=================== INITIAL MATRIX ========================")
 print(initial_matrix)
 initial_matrix.to_csv('initial_matrix.tsv',sep='\t')
 
-GprimeDf, posSet = build_GprimeMatrix(gp_table, initial_matrix, cellToClusterDict) #building the G' matrix                                                                                                            
+GprimeDf, posSet = build_GprimeMatrix(gp_table, initial_matrix, chromPosToInt_dict, cellToClusterDict) #building the G' matrix
+GprimeDf = GprimeDf.fillna(0)
+
 print("================== G' matrix =========================")
 print(GprimeDf)
+
 cell_pos_dict = cell_pos_SNV(initial_matrix, posSet)
 filtered_cell_pos_dict = filter_cell_pos_SNV(cell_pos_dict, GprimeDf, clusterToCellDict, posSet)
 simulated_input_dict = simulated_input_tree(clusterToCellDict, timeToCellIdDict, filtered_cell_pos_dict)

@@ -1,34 +1,20 @@
 {
-    "1": [
+    "0": [
         "X1_Nucleus_1",
         "X1_Nucleus_10",
         "X1_Nucleus_11",
         "X1_Nucleus_12",
         "X1_Nucleus_13",
-        "X1_Nucleus_16",
         "X1_Nucleus_20",
         "X1_Nucleus_21",
-        "X1_Nucleus_22",
-        "X1_Nucleus_23",
         "X1_Nucleus_24",
-        "X1_Nucleus_26",
-        "X1_Nucleus_3",
         "X1_Nucleus_4",
-        "X1_Nucleus_5",
-        "X1_Nucleus_6",
         "X1_Nucleus_7",
         "X1_Nucleus_8",
         "X1_Nucleus_9",
-        "X2_Nucleus_11",
-        "X2_Nucleus_13",
-        "X2_Nucleus_25",
-        "X2_Nucleus_27",
-        "X2_Nucleus_28",
-        "X2_Nucleus_29",
-        "X2_Nucleus_35",
-        "X2_Nucleus_8"
+        "X2_Nucleus_25"
     ],
-    "0": [
+    "5": [
         "X1_Nucleus_14",
         "X1_Nucleus_18",
         "X1_Nucleus_19",
@@ -49,7 +35,7 @@
         "X2_Nucleus_33",
         "X2_Nucleus_9"
     ],
-    "3": [
+    "1": [
         "X1_Nucleus_15",
         "X1_Nucleus_17",
         "X1_Nucleus_2",
@@ -67,5 +53,21 @@
         "X2_Nucleus_5",
         "X2_Nucleus_6",
         "X2_Nucleus_7"
+    ],
+    "3": [
+        "X1_Nucleus_16",
+        "X1_Nucleus_22",
+        "X1_Nucleus_23",
+        "X1_Nucleus_26",
+        "X1_Nucleus_3",
+        "X1_Nucleus_5",
+        "X1_Nucleus_6",
+        "X2_Nucleus_11",
+        "X2_Nucleus_13",
+        "X2_Nucleus_27",
+        "X2_Nucleus_28",
+        "X2_Nucleus_29",
+        "X2_Nucleus_35",
+        "X2_Nucleus_8"
     ]
 }

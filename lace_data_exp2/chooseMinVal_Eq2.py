@@ -8,7 +8,6 @@ import json
 
 def call_equation2(inputFile, gp, cp, lambda_coeff, clusters, cellToCluster):
     eq2_cmd = 'python equation2Value.py -input '+inputFile+' -gp '+gp+' -cp '+cp+' -lambda_coeff '+lambda_coeff+' -subclones '+clusters+' -cellCluster '+cellToCluster
-    print(eq2_cmd)
     result = subprocess.run(eq2_cmd, stdout=subprocess.PIPE, shell=True)
     return result.stdout.decode('utf-8')
 
@@ -37,6 +36,7 @@ for dirname in glob.iglob('./scg_clusterNo*'):
                 gp = dirname+"/"+filename.name    
     #print(" CP "+cp+" GP "+gp)
     eq2_value = call_equation2(args.input, gp, cp, args.lambda_coeff, clusterNo, dirname+'/cellToCluster.json')
+    print("Eq 2 value ",eq2_value)
     eq2Val_dict[dirname] = eq2_value
 
 with open('eq2_Values.json','w') as fp:
