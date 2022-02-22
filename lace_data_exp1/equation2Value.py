@@ -114,7 +114,7 @@ def findEtaValue(D_df, GDoublePrimeMatrix, cellToClusterDict):
                 TPcount = TPcount+1
             elif metric == "TN":
                 TNcount == TNcount+1
-    #print("FP count ",FPcount, " FN count ",FNcount, " TP count ",TPcount, " TN count ",TNcount)
+    print("FP count ",FPcount, " FN count ",FNcount, " TP count ",TPcount, " TN count ",TNcount)
     FPrate = FPcount/(FPcount+TPcount)
     FNrate = FNcount/(FNcount+TNcount)
     #print("FP rate ",FPrate, " FN rate ", FNrate)
@@ -175,7 +175,7 @@ GprimeDf = build_GprimeMatrix(gp_table, cellToClusterDict) #building the G' matr
 
 D_matrix_df = convertInputMatrixToBinary(args.input)
 eta = findEtaValue(D_matrix_df, GDoublePrimeDf, cellToClusterDict)
-#print(" Eta value ",eta)
+print(" Eta value ",eta)
 #print(D_matrix_df.shape)
 
 e_value = calculate_E(eta, args.lambda_coeff, args.subclones, GDoublePrimeDf, D_matrix_df)

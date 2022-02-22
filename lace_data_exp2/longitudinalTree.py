@@ -4,7 +4,9 @@ import argparse
 from collections import OrderedDict
 import itertools
 from itertools import combinations, chain
+import gc
 
+gc.collect()
 #class Tree:
 #    def __init__(self,node,data, tree_dict,children='None'):
 #        self.tree_dict = tree_dict
@@ -191,7 +193,7 @@ def del_edges(unobserved_sc_tree, tree_with_children):
                 k1_time_index = k1_time_key_values[1]
                 if len(k1_time_key_values) == 4 and k_time_index == k1_time_index:
                     if k_time_child == tree_with_children[k1_time]:
-                        print("Same children !!! ")
+                        #print("Same children !!! ",k_time," ",k1_time)
                         updated_tree_children[k_time] = tree_with_children[k_time]
                         #usc_nodes_to_ignore.append(k_time)
                         usc_nodes_to_ignore.append(k1_time)
@@ -211,10 +213,14 @@ def del_edges(unobserved_sc_tree, tree_with_children):
                 updated_tree_children[k_time] = child_list
             elif child not in usc_nodes_to_ignore and 'usc' in child: # checking unobserved subclones and preserving their connections.
                 #print(" k time ",k_time," child ",child)
+                #print(updated_tree_children)
                 if k_time in updated_tree_children:
+                    #gc.collect()
                     temp_child_list = updated_tree_children[k_time]
-                    temp_child_list.append(child)
-                    updated_tree_children[k_time] = temp_child_list
+                    if child not in temp_child_list:
+                        #print(" Length temp_child_list ",len(temp_child_list))
+                        temp_child_list.append(child)
+                        updated_tree_children[k_time] = temp_child_list
                 else:
                     child_list.append(child)
                     updated_tree_children[k_time] = child_list
@@ -226,9 +232,15 @@ def del_edges(unobserved_sc_tree, tree_with_children):
                 if child in usc_child:
                     print("USc time with child  --->> ",k_time," ",child)
                     usc_child.remove(child)
-            #print(" Usc time node preserved ------>> ",k_time)
+            print(" Usc time node preserved ------>> ",k_time," child ",usc_child)
             if usc_child != []:
                 updated_tree_children[k_time] = usc_child
+
+        #Removing keys existing as USC nodes to ignore
+        for key in usc_nodes_to_ignore:
+            if key in updated_tree_children:
+                updated_tree_children.pop(key)
+
     return updated_tree_children
                 
 ''' Construct a tree as dictionary where nodes are the keys and their corresponding children nodes are values. '''
