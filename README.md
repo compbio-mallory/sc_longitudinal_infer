@@ -33,7 +33,7 @@ python equation2Value.py -input ../scg/examples/snv.tsv -gp ../no_doublet/genoty
 
 Please replace it with corresponding path, file names and parameters. 
 
-UPDATE: The folders LACE_DATA_EXP* has the correct and updated equation2Value.py.
+UPDATE: The folders LACE_SIM_DATA* has the correct and updated equation2Value.py.
 
 ---------------------------------------------------------------------------------
 
@@ -69,4 +69,24 @@ To test with the simulated data or examples created by us run the scripts in thi
   python input_for_tree.py -input merged.tsv.gz -gp ./scg_clusterNo_5_iter_6/genotype_posteriors.tsv.gz -cellCluster ./scg_clusterNo_5_iter_6/cellToCluster.json -timepoints lace_real_data_tp_1.json -output inputForLongitudinalTree.json
 
   python longitudinalTree.py -input inputForLongitudinalTree.json -inputType dict
+  
+  -------------------------------------------------------------------------------
+  
+  Steps to run experiments with LACE Simulated data:
+
+1. Inside /gpfs/research/fangroup/rk18g/longitudinal/LACE-UTILITIES/simulations/exp1_smartseq_10x/topology_1 there are two scripts: extractData.py and processDatasets.py. The first one gets sample dataset from each topology and second script helps to get the input data D (DMatrix_1.tsv), ground truth matrix (GT_matrix_1.tsv) and corrected genotype matrix.
+2. We can copy the required matrices in the following path: /gpfs/research/fangroup/rk18g/longitudinal/SCG_Roth/Gyanendra_code/lace_sim_data.
+  Then follow the following steps:
+  
+  1. python save_multipleSCGresults.py -input DMatrix_1.tsv.gz -cluster_list 20 40 60 80 100 -scg_config ../../../SCG_Roth/scg/examples/config.yaml -niters 10 (to run SCG with many iterations).
+  2. python chooseMinVal_Eq2.py -input DMatrix_1.tsv.gz -lambda_coeff 0.2 (choose the SCG result with min Eq 2 value). (This also returns the cell timepoints)
+  3. python input_for_tree.py -input DMatrix_1.tsv.gz -gp ./scg_clusterNo_20_iter_8/genotype_posteriors.tsv.gz -cellCluster ./scg_clusterNo_20_iter_8/cellToCluster.json -timepoints cell_timepoints.json -output inputForLongitudinalTree.json
+  4. python longitudinalTree.py -input inputForLongitudinalTree.json -inputType dict
+  
+  This will give you the tree using our algorithm. To compare with LACE's tree that is saved in MacBook's Documents: extractData_usingR.R and can be executed in RStudio.
+  
+3. The evaluation metrics which is to get the FP, TP, FN, TN values comapring LACE's data, inferred data and ground truth data can be done in the following way:
+  1. python equation2Value.py -input DMatrix_1.tsv.gz -gp ./scg_clusterNo_20_iter_8/genotype_posteriors.tsv.gz -cp ./scg_clusterNo_20_iter_8/cluster_posteriors.tsv.gz -lambda_coeff 0.2 -subclones 20 -cellCluster ./scg_clusterNo_20_iter_8/cellToCluster.json (To get difference between D and our inG'', our inG'' and gtG'').
+  2. python lace_equation2Value.py -inputD DMatrix_1.tsv.gz -inputG Lace_inferred_G.tsv  (Get LACE's results between inG'' and gtG'', D and inG'', D and gtG'')
+  3. python evaluateMetrics.py -inputD DMatrix_1.tsv.gz -inG GDoublePrimeDf.tsv -gtG GT_matrix_1.tsv (Get corrected FP,FN, lost TP,TN, inferred FP,FN for both LACE and our data).
 
