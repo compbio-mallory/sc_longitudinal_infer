@@ -72,6 +72,20 @@ To test with the simulated data or examples created by us run the scripts in thi
   
   -------------------------------------------------------------------------------
   
+ Steps to get LACE’s simulated data ready for further analysis:
+  
+1. For each topologies we have a file extractData.py which helps to extract each datasets from the topologies. Need to manually mention inside code which dataset we want to extract from the input_data.json.
+
+2. For each extracted dataset in json formats we execute a file processDatasets.py which helps to get the raw D matrix, ground truth matrix and their provided corrected genotype matrix. Modify the # of cells in each time point according to the dataset.
+
+3. After this we use the input_data.rdata and execute the extractData_usingR.R in RStudio to get lace_inference.rdata. Once we have that we use convertRToJson.R to convert the inference results to a json file.
+
+4. Then we use analyze_inference.py script to get the LACE_inference results as matrix. Here also we have to change # of cells in each timepoint. 
+
+5. Copy the D, ground truth and lace inference matrix to respective folders for downstream analysis.
+  
+----------------------------------------------------------------------------------
+  
   Steps to run experiments with LACE Simulated data:
 
 1. Inside /gpfs/research/fangroup/rk18g/longitudinal/LACE-UTILITIES/simulations/exp1_smartseq_10x/topology_1 there are two scripts: extractData.py and processDatasets.py. The first one gets sample dataset from each topology and second script helps to get the input data D (DMatrix_1.tsv), ground truth matrix (GT_matrix_1.tsv) and corrected genotype matrix.
