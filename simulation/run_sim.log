@@ -1,0 +1,8 @@
+
+# Get default tree with all default parameters
+mkdir default
+for j in `seq 1 5`; do mkdir default/rep$j; done
+for j in `seq 1 5`; do python gen_tree.py -T 3 -t_v 15 7 0 -v1 0.2 -v2 0.4 -u 0.2 -B 0.2 -theta 0.2 -o default/rep$j/tree_default_rep${j}.csv; done
+for j in `seq 1 5`; do python sim_par.py -a 0.01 -b 0.2 -m 0.2 -c 100 500 -mc 1.7 -f default/rep$j/tree_default_rep${j}.csv -P default/rep$j/default_rep${j}; done
+
+

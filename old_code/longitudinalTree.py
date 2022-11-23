@@ -98,7 +98,7 @@ def timepoint_subclones(dict_For_tree):
                     new_dict[new_dict_key] = set(key_list)
     return new_dict
 
-''' Find the unobserved subclones. '''
+''' Find the unobserved subclones. ''' #### Need to modify this whole function according to the new algorithm.
 def find_unobserved_subclones(dict_For_tree):
     temp_unobserved_sc = {} # will save all subsets here and separate them later with the function validate_subclones()
     t_subclones = timepoint_subclones(dict_For_tree)
@@ -137,7 +137,7 @@ def find_unobserved_subclones(dict_For_tree):
             else:
                 continue
             
-    #print(temp_unobserved_sc)
+    #print(temp_unobserved_sc) #### Why are we checking it two times? Should be done only once.
     unobserved_sc = validate_subclones(temp_unobserved_sc,dict_For_tree) # check if the subsets obtained are proper subsets and supersets.
     print("Dict with the unobserved clones ",unobserved_sc)
     return unobserved_sc
@@ -231,6 +231,7 @@ def del_edges(unobserved_sc_tree, tree_with_children):
                 updated_tree_children[k_time] = usc_child
     return updated_tree_children
                 
+#### Construct graph like structure similar to what we have for simulated data.
 ''' Construct a tree as dictionary where nodes are the keys and their corresponding children nodes are values. '''
 def construct_tree(unobserved_sc_tree):
     #Compare keys of each pairs and check if their values are subsets.
@@ -459,6 +460,7 @@ def forward_mutation_two(tree_with_children, unobserved_sc_tree):
     print(" Node_u_v ",node_u_v)
     return node_u_v
 
+#### We won't be needing this part of the algorithm.
 ''' This method evaluates the cluster to check if any mutation is missed at a time point and then later added at another time.
 This is a clustering error which we want to detect.'''
 def evaluate_clustering(tree_with_children, unobserved_sc_tree):
@@ -489,6 +491,7 @@ def evaluate_clustering(tree_with_children, unobserved_sc_tree):
     return cluster_mistake
     #print(" Evaluating cluster ",cluster_mistake)
     
+#### We won't be implementing the back mutation part as well.    
 ''' This method looks for back mutations, connects the nodes(x,y) and records the edges. '''
 def back_mutation(tree_with_children, unobserved_sc_tree):
     # The following lines searches if any node in t+1 is unconnected to any node in t.
@@ -559,6 +562,7 @@ def back_mutation(tree_with_children, unobserved_sc_tree):
     print(" Node_x_y ",node_x_y)
     return node_x_y
     
+#### Maybe we can use this method.
 ''' Method to update the longitudinal tree with the nodes. ''' 
 def update_longitudinal_tree(unobserved_sc_tree, nodes_to_remove, nodes_to_add_dict, u_v_conn, x_y_conn):
     # Update unobserved_sc_tree by removing nodes_to_remove and adding values from nodes_to_add_dict.
