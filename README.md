@@ -1,5 +1,16 @@
 # sc_longitudinal_infer
 
+algorithm - has the recent implemented longitudinal algorithm
+Clustering - has the clustering pipeline with BnpC
+evaluation - has the evaluation scripts to calculate precision, recall, V-measure, unobserved subclones.
+inputs - has some old dummy data.
+LACE_exp - has the pipeling to run LACE on our simulated data.
+real_data_exp - has the pipeling to run scLongTree on real data SA501.
+simulated_data_exp - has the pipeline to run scLongTree on our simulated data.
+simulation - script to generate simulated data and all the data.
+visualize - scripts to visualize the tree.
+-------------------------------------------------------------------------------
+
 For clustering we used SCG. Here are the steps to run SCG:
 
 1. conda activate scg
