@@ -1,0 +1,175 @@
+default_mr_rep1_m1
+ Total estimated FP  147  True negatives  14637
+ Total estimated FN  1830  True positives  7386
+ FP rate deno  7533
+ FN rate deno  16467
+ Estimated FP rate  0.02
+ Estimated FN rate  0.11
+default_mr_rep1_m2
+ Total estimated FP  149  True negatives  14636
+ Total estimated FN  1831  True positives  7384
+ FP rate deno  7533
+ FN rate deno  16467
+ Estimated FP rate  0.02
+ Estimated FN rate  0.11
+default_mr_rep1_m3
+ Total estimated FP  147  True negatives  14624
+ Total estimated FN  1843  True positives  7386
+ FP rate deno  7533
+ FN rate deno  16467
+ Estimated FP rate  0.02
+ Estimated FN rate  0.11
+default_mr_rep1_m4 (best tree)
+ Total estimated FP  145  True negatives  14634
+ Total estimated FN  1833  True positives  7388
+ FP rate deno  7533
+ FN rate deno  16467
+ Estimated FP rate  0.02
+ Estimated FN rate  0.11
+default_mr_rep1_m5
+ Total estimated FP  150  True negatives  14641
+ Total estimated FN  1826  True positives  7383
+ FP rate deno  7533
+ FN rate deno  16467
+ Estimated FP rate  0.02
+ Estimated FN rate  0.11
+default_mr_rep2_m1
+ Total estimated FP  71  True negatives  8075
+ Total estimated FN  1500  True positives  6194
+ FP rate deno  6265
+ FN rate deno  9575
+ Estimated FP rate  0.01
+ Estimated FN rate  0.16
+default_mr_rep2_m2
+ Total estimated FP  71  True negatives  8076
+ Total estimated FN  1499  True positives  6194
+ FP rate deno  6265
+ FN rate deno  9575
+ Estimated FP rate  0.01
+ Estimated FN rate  0.16
+default_mr_rep2_m3
+ Total estimated FP  71  True negatives  8076
+ Total estimated FN  1499  True positives  6194
+ FP rate deno  6265
+ FN rate deno  9575
+ Estimated FP rate  0.01
+ Estimated FN rate  0.16
+default_mr_rep2_m4 (best tree)
+ Total estimated FP  71  True negatives  8076
+ Total estimated FN  1499  True positives  6194
+ FP rate deno  6265
+ FN rate deno  9575
+ Estimated FP rate  0.01
+ Estimated FN rate  0.16
+default_mr_rep2_m5
+ Total estimated FP  68  True negatives  8080
+ Total estimated FN  1495  True positives  6197
+ FP rate deno  6265
+ FN rate deno  9575
+ Estimated FP rate  0.01
+ Estimated FN rate  0.16
+default_mr_rep3_m1
+ Total estimated FP  99  True negatives  9816
+ Total estimated FN  1270  True positives  5135
+ FP rate deno  5234
+ FN rate deno  11086
+ Estimated FP rate  0.02
+ Estimated FN rate  0.11
+default_mr_rep3_m2 (best tree)
+ Total estimated FP  95  True negatives  9805
+ Total estimated FN  1281  True positives  5139
+ FP rate deno  5234
+ FN rate deno  11086
+ Estimated FP rate  0.02
+ Estimated FN rate  0.12
+default_mr_rep3_m3
+ Total estimated FP  99  True negatives  9805
+ Total estimated FN  1281  True positives  5135
+ FP rate deno  5234
+ FN rate deno  11086
+ Estimated FP rate  0.02
+ Estimated FN rate  0.12
+default_mr_rep3_m4
+ Total estimated FP  95  True negatives  9804
+ Total estimated FN  1282  True positives  5139
+ FP rate deno  5234
+ FN rate deno  11086
+ Estimated FP rate  0.02
+ Estimated FN rate  0.12
+default_mr_rep3_m5
+ Total estimated FP  95  True negatives  9809
+ Total estimated FN  1277  True positives  5139
+ FP rate deno  5234
+ FN rate deno  11086
+ Estimated FP rate  0.02
+ Estimated FN rate  0.12
+default_mr_rep4_m1
+ Total estimated FP  100  True negatives  9636
+ Total estimated FN  2341  True positives  9523
+ FP rate deno  9623
+ FN rate deno  11977
+ Estimated FP rate  0.01
+ Estimated FN rate  0.2
+default_mr_rep4_m2
+ Total estimated FP  92  True negatives  9599
+ Total estimated FN  2378  True positives  9531
+ FP rate deno  9623
+ FN rate deno  11977
+ Estimated FP rate  0.01
+ Estimated FN rate  0.2
+default_mr_rep4_m3 (best tree)
+ Total estimated FP  96  True negatives  9596
+ Total estimated FN  2381  True positives  9527
+ FP rate deno  9623
+ FN rate deno  11977
+ Estimated FP rate  0.01
+ Estimated FN rate  0.2
+default_mr_rep4_m4
+ Total estimated FP  92  True negatives  9603
+ Total estimated FN  2374  True positives  9531
+ FP rate deno  9623
+ FN rate deno  11977
+ Estimated FP rate  0.01
+ Estimated FN rate  0.2
+default_mr_rep4_m5
+ Total estimated FP  100  True negatives  9618
+ Total estimated FN  2359  True positives  9523
+ FP rate deno  9623
+ FN rate deno  11977
+ Estimated FP rate  0.01
+ Estimated FN rate  0.2
+default_mr_rep5_m1
+ Total estimated FP  154  True negatives  15686
+ Total estimated FN  576  True positives  2304
+ FP rate deno  2458
+ FN rate deno  16262
+ Estimated FP rate  0.06
+ Estimated FN rate  0.04
+default_mr_rep5_m2 (best tree)
+ Total estimated FP  158  True negatives  15687
+ Total estimated FN  575  True positives  2300
+ FP rate deno  2458
+ FN rate deno  16262
+ Estimated FP rate  0.06
+ Estimated FN rate  0.04
+default_mr_rep5_m3
+ Total estimated FP  158  True negatives  15687
+ Total estimated FN  575  True positives  2300
+ FP rate deno  2458
+ FN rate deno  16262
+ Estimated FP rate  0.06
+ Estimated FN rate  0.04
+default_mr_rep5_m4
+ Total estimated FP  158  True negatives  15687
+ Total estimated FN  575  True positives  2300
+ FP rate deno  2458
+ FN rate deno  16262
+ Estimated FP rate  0.06
+ Estimated FN rate  0.04
+default_mr_rep5_m5
+ Total estimated FP  157  True negatives  15679
+ Total estimated FN  583  True positives  2301
+ FP rate deno  2458
+ FN rate deno  16262
+ Estimated FP rate  0.06
+ Estimated FN rate  0.04

@@ -1,0 +1,27 @@
+# First get the processed Input file to run BnpC on the data
+python processRealData.py -input SA501/merged.tsv -output  SA501/bnpcInput.D.tsv
+
+# First run BnpC on the data
+for i in 'seq 0 4'; do rd_bnpc.$i.slurm; done
+
+# Then to get the input for the longitudinal tree we need to get the cells at each timepoints.
+# We get that using tthe following script
+python SA501/getCellTimePoints.py 
+
+# Then we run the following script to get the input for the longitudinal tree algorithm
+for i in `seq 1 5`; do
+	python inputForTree.py -cc bnpc_output/m$i/assignment.txt -cg bnpc_InGenotype/m$i'.G.tsv' -sim false -celltp SA501/cell_timepoints.csv -op inputForTree/m$i'.Gprime.csv' -ccop inputForTree/m$i'.npy'
+done
+
+# Then get the Estimated False postive and False negative rates
+for i in `seq 1 5`; do
+	python getEstimatedFPFN.py -G bnpc_InGenotype/m$i'.G.tsv' -D SA501/input.D.csv -op bnpc_output/m$i/'FP_FNrate.npy'
+done
+
+# Then run the longitudinal tree algorithm
+for i in `seq 1 5`; do
+	python longitudinalTree.py -input inputForTree/m$i'.Gprime.csv' -cg bnpc_InGenotype/m$i'.G.tsv' -cc inputForTree/m$i'.npy' -D SA501/input.D.csv -celltp SA501/cell_timepoints.csv -FPFN bnpc_output/m$i/'FP_FNrate.npy' -sim false -op_tree inferredTree/m$i'_tree.csv' -cloneNode inferredTree/m$i'_cloneNode.npy' -cloneCells inferredTree/m$i'_cloneCells.npy'
+done
+
+# Then select the best cluster and compare the tree with LACE's real data result
+python selectBestCluster.py -tree inferredTree/'m1_tree.csv' inferredTree/'m2_tree.csv' inferredTree/'m3_tree.csv' inferredTree/'m4_tree.csv' inferredTree/'m5_tree.csv' -bnpcOp bnpc_output

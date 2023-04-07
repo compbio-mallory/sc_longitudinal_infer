@@ -157,19 +157,33 @@ def distribute_SNVcells(cell_n, tree_f, out_f):
             nodeID = (nodes.split(';'))[0]
             SNVcellP = (nodes.split(';'))[1]
             SNVcell_num = round(cell_num * float(SNVcellP))
+
+            if SNVcell_num == 0: # If SNVcell_num becomes negative then take 1 cell from previous node and assign it here. This can only happen in the end so we don't update other variables.
+                prev_node = int(nodeID) - 1
+                SNVcell_dict_key = str(int(key))+'_'+str(prev_node)
+                prev_node_cells = SNVcell_dict[SNVcell_dict_key].split(";")
+                SNVcell_dict[SNVcell_dict_key] = ";".join(prev_node_cells[:-1]) # Update prev node's cellIDs by removing one from them
+                SNVcell_dict[str(int(key))+'_'+nodeID] = prev_node_cells[len(prev_node_cells)-1] # And assign that cellID from the prev node to the current node. Getting the last cellID to maintain the order
+
+
             total_cells = total_cells+SNVcell_num
+            #print(" After assigning total cells ",total_cells)
+
             if total_cells > cell_num: # check that cell assignment does not surpass the total available cells.
                 diff = total_cells - cell_num
                 SNVcell_num = SNVcell_num - diff
             
             print(" NodeID ",nodeID," Cell perc ",SNVcellP," cell no ",SNVcell_num)
 
-            cell_IDs = str(prev_cell + 1)
-            for j in range(prev_cell + 2, prev_cell + SNVcell_num + 1):
-                cell_IDs = cell_IDs + ";" + str(j)
-            prev_cell = prev_cell + SNVcell_num
-            SNVcell_dict[str(int(key))+'_'+nodeID] = cell_IDs
-            last_node = nodeID
+            if SNVcell_num > 0:
+                cell_IDs = str(prev_cell + 1)
+                for j in range(prev_cell + 2, prev_cell + SNVcell_num + 1):
+                    cell_IDs = cell_IDs + ";" + str(j)
+                prev_cell = prev_cell + SNVcell_num
+                print(" Prev cell ",prev_cell)
+                SNVcell_dict[str(int(key))+'_'+nodeID] = cell_IDs
+                last_node = nodeID
+                #print(SNVcell_dict)
 
         #print(" Total cells ",total_cells," in tp ",key)
         if total_cells < cell_num:
@@ -188,8 +202,9 @@ def distribute_SNVcells(cell_n, tree_f, out_f):
             SNVcell_dict[str(int(key))+'_'+last_node] = cellIDs
         i = i+1
 
-    #print(SNVcell_dict)
+    print(SNVcell_dict)
     print_f(SNVcell_dict, out_f) # Saves the cells in a file
+    print(" Final total no of cells ",prev_cell+1)
     return SNVcell_dict,prev_cell+1
 
 def add_missing(G, n, m, missingP):

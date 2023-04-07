@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+import json
 
 ''' Get the mutations of each node. '''
 def get_nodeMut(mut_file):
@@ -218,12 +219,21 @@ def calculate_precision_recall(gt_tp_mutations, lg_tp_mutations):
         timepoint_precision_recall[timepoint] = str(precision)+","+str(recall)
     return timepoint_precision_recall
 
+''' Read the mutations at each timpoint given by LACE '''
+def getLACE_mutations(lace_tp_mutFile):
+    f = open(lace_tp_mutFile,'r')
+    lace_tp_mut = json.load(f)
+    print(" LACE mutations ",lace_tp_mut)
+    return lace_tp_mut
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-mut", "--mut",dest ="mut", help="Ground truth mutations")
 parser.add_argument("-gtTree", "--gtTree",dest ="gtTree", help="Ground truth tree")
 parser.add_argument("-lgTree","--lgTree",dest="lgTree", help="Longitudinal tree inferred from the algorithm")
 parser.add_argument("-cg","--cg",dest="cg", help="BnpC's inferred Gprime or consensus genotype")
 parser.add_argument("-clone","--clone",dest="clone", help="Clones mapped to the inferred longitudinal tree")
+parser.add_argument("-lace","--lace",dest="lace", help="LACE file is passed or not for evaluation. Value is true or false.")
+parser.add_argument("-laceFile","--laceFile",dest="laceFile", help="LACE file having the mutations in each timepoint")
 args = parser.parse_args()
 
 gt_node_mut = get_nodeMut(args.mut)
@@ -234,7 +244,7 @@ gt_node_timepoint, gt_child_parent, dead_nodes = get_tp_node(args.gtTree)
 updated_node_mut = update_node_mut(gt_node_mut, gt_child_parent)
 gt_tp_mutations = get_tp_mutations(updated_node_mut, gt_node_timepoint, dead_nodes) # use this if you want edge length to be 0.
 #gt_tp_mutations = get_tp_mutations(gt_node_mut, gt_node_timepoint)
-#print(" GT Timepoint mutations ",gt_tp_mutations)
+print(" GT Timepoint mutations ",gt_tp_mutations)
 
 lg_node_mut, lg_node_timepoint, lg_child_parent = read_inferred_tree(args.lgTree)
 print("======== Longitudinal Tree ===========")
@@ -251,4 +261,9 @@ print(" LG mutations ",lg_tp_mutations)
 #bnpc_timepoint_mutation = get_mutations_fromCG(args.cg, clones_nodes) # Evaluating against BnpC's consensus genotype. Dropping clones that have no supporting cells.
 #print(" BnpC Timepoint mutations ",bnpc_timepoint_mutation)
 #timepoint_precision_recall = calculate_precision_recall(gt_tp_mutations, bnpc_timepoint_mutation)
+
 timepoint_precision_recall = calculate_precision_recall(gt_tp_mutations,lg_tp_mutations)
+print("=============================")
+if args.lace == "true":
+    lace_tp_mut = getLACE_mutations(args.laceFile)
+    lace_timepoint_precision_recall = calculate_precision_recall(gt_tp_mutations,lace_tp_mut)

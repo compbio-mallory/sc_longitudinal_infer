@@ -1,0 +1,12 @@
+0	1	-1	subclone		
+1	2	8	subclone	0,1,2,3,4,5,6,8,9,14,15,16,17,18	12
+2	2	8	subclone	0,1,2,3,4,5,6,7,8,9,19,20	10
+3	2	8	subclone	0,1,2,3,4,5,6,7,8,9,12,13,15,18,19,20	14,14
+4	2	8	subclone	2,7,8,19,21,27,28	5,6,5
+5	2	9	subclone	11,12,13,21,22,23,24	5,6
+6	2	9	subclone	10,11,12,13,25,26,27,28	6,6
+7	3	6	subclone	10,11,12,13,25,26,27,28	0
+8	1.5	0	unobserved subclone	2,8	2
+9	1.5	0	unobserved subclone	12,13	2
+10	1.5	0	unobserved subclone	21	1
+11	1.5	0	unobserved subclone	27,28	2

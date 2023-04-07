@@ -1,0 +1,34 @@
+# Create folders for results of each datasets
+for i in ./sim_LACE_in/*; do
+        simDataType=$(echo $i| cut -d'/' -f 3)
+        #echo $simDataType
+        mkdir sim_LACE_op/$simDataType
+        for k in `seq 1 5`; do
+                mkdir sim_LACE_op/$simDataType/rep$k;
+        done
+done
+
+# Read the LACE input RData and run LACE on it
+for i in ./sim_LACE_in/*; do
+        simDataType=$(echo $i| cut -d'/' -f 3)
+        for k in `seq 1 5`; do
+                for j in ./sim_LACE_in/$simDataType/rep$k/*.RData; do
+			echo "module load R" >> sim_run_LACE.sh
+			echo "Rscript run_LACE.R $j sim_LACE_op/$simDataType/rep$k/inf_rep$k.rdata sim_LACE_op/$simDataType/rep$k/lgTree_rep$k.xml" >> sim_run_LACE.sh
+			echo "#" >> sim_run_LACE.sh
+		done
+	done
+done 
+
+# Create .slurm files to run the jobe
+python gen_jobs.py -input sim_run_LACE.sh -n 2 -mem_per_cpu 4GB -p fan_q -algo LACE -sim true 
+
+#Launch jobs
+for i in `seq 0 4`; do sbatch sim_run_LACE.$i.slurm; done
+
+#After saving LACE inference results from their run
+Rscript read_LACE_inference.R sim_LACE_op/default/rep1/inf_rep1.rdata sim_LACE_op/default/rep1/c_inf.json sim_LACE_op/default/rep1/clones_summary.json
+
+#Python script to process the output of LACE and get the mutations at each timepoint. And the assignment.txt file where each cells assigned to the clones to calculate V-measure.
+python processOutput.py -cInf sim_LACE_op/default/rep1/c_inf.json -clonesSum sim_LACE_op/default/rep1/clones_summary.json -path sim_LACE_op/default/rep1/
+

@@ -6,7 +6,7 @@ python evaluateMetrics.py -cg sim_consensus_genotype/default_rep1_t2.csv -gtG gr
 python ../evaluation.py -i "bnpc:"./sim_output/default/rep1/assignment.txt -G ./sim_input/default/rep1/default_rep1.G.csv -v 
 
 # Calculate precision recall
-python calculate_PrecisionRecall.py -mut ../simulation/default/rep1/default_rep1.mut.csv -gtTree ../simulation/default/rep1/tree_default_rep1.csv -lgTree inferred_tree/rep1_tree.csv 
+python calculate_PrecisionRecall.py -mut ../simulation/default/rep1/default_rep1.mut.csv -gtTree ../simulation/default/rep1/tree_default_rep1.csv -lgTree inferred_tree/rep1_tree.csv -lace true -laceFile ../test_LACE/sim_LACE_op/default/rep1/tp_mut.json
 #-cg sim_input_ForTree/default_rep1.Gprime.csv -clone clone_node.npy 
 
 # Evaluate the unobserved subclones

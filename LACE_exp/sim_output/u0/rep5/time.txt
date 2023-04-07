@@ -1,0 +1,11 @@
+Job ID: 7615396
+Cluster: production
+User/Group: rk18g/rk18g
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 4
+CPU Utilized: 00:00:07
+CPU Efficiency: 0.04% of 04:47:28 core-walltime
+Job Wall-clock time: 01:11:52
+Memory Utilized: 449.93 MB
+Memory Efficiency: 1.37% of 32.00 GB

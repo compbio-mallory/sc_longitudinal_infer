@@ -1,0 +1,43 @@
+
+DPMM with:
+	3000 cells
+	79 mutations
+	learning errors
+
+	Priors:
+	params.:	Beta(0.25,0.25)
+	CRP a_0:	Gamma(54.77,1)
+	FP:		trunc norm(0.01,0.01)
+	FN:		trunc norm(0.2,0.1)
+
+Move probabilitites:
+	Split/merge:	0.33
+		split/merge ratio:	[0.75, 0.25]
+		intermediate Gibbs:	3
+	CRP a_0 update:	0.25
+	Errors update:	0.25
+
+Run MCMC with (1 chains for 5000 steps):
+
+Clustering time:	0:42:02.325243	(0.50 secs. per MCMC step)	Lugsail PSRF:		1.01007
+
+Chain mean - posterior clusters	(#8):
+	8 clusters
+
+	A: 772 items
+	B: 872 items
+	C: 314 items
+	D: 2 items
+	E: 574 items
+	F: 141 items
+	G: 67 items
+	H: 258 items
+
+Inferred latent variables	--	chain mean - posterior
+	CRP a_0:	247.5 +- 31.4
+	FP (model|genotypes): 3.4E-03 +- 4.2E-04	|	8.0E-03
+	FN (model|genotypes): 0.161   +- 0.006	|	0.160
+
+Writing output to: ./sim_output/t4/rep4/m1
+
+Too many cells to plot genotypes/clusters

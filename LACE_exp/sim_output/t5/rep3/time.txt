@@ -1,0 +1,11 @@
+Job ID: 7581501
+Cluster: production
+User/Group: rk18g/rk18g
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 4
+CPU Utilized: 00:00:12
+CPU Efficiency: 0.00% of 4-18:10:48 core-walltime
+Job Wall-clock time: 1-04:32:42
+Memory Utilized: 490.95 MB
+Memory Efficiency: 1.50% of 32.00 GB

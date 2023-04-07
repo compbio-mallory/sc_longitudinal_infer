@@ -1,0 +1,2 @@
+# Run the following script and get the trees and necessary data from other folders
+python visualizeTree.py -tree bestTree/default_mr_rep1_m4_tree.csv -cloneNode bestTree/default_mr_rep4_m3_cloneNode.npy -cloneCells bestTree/default_mr_rep4_m3_cloneCells.npy -pngFile test.png

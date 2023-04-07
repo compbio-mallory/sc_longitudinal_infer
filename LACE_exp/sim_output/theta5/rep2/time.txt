@@ -1,0 +1,11 @@
+Job ID: 7582298
+Cluster: production
+User/Group: rk18g/rk18g
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 4
+CPU Utilized: 00:00:06
+CPU Efficiency: 0.03% of 06:10:16 core-walltime
+Job Wall-clock time: 01:32:34
+Memory Utilized: 450.57 MB
+Memory Efficiency: 1.38% of 32.00 GB

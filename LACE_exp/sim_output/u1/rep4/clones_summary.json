@@ -1,0 +1,28 @@
+{
+  "clones_summary": {
+    "Clone_1": "SNV5",
+    "Clone_2": ["SNV5", "SNV4"],
+    "Clone_3": ["SNV5", "SNV4", "SNV3"],
+    "Clone_4": ["SNV5", "SNV4", "SNV3", "SNV21"],
+    "Clone_5": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22"],
+    "Clone_6": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10"],
+    "Clone_7": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12"],
+    "Clone_8": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11"],
+    "Clone_9": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16"],
+    "Clone_10": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14"],
+    "Clone_11": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19"],
+    "Clone_12": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23"],
+    "Clone_13": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9"],
+    "Clone_14": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13"],
+    "Clone_15": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13", "SNV17"],
+    "Clone_16": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13", "SNV17", "SNV8"],
+    "Clone_17": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13", "SNV17", "SNV8", "SNV18"],
+    "Clone_18": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13", "SNV17", "SNV8", "SNV18", "SNV20"],
+    "Clone_19": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13", "SNV17", "SNV8", "SNV18", "SNV20", "SNV6"],
+    "Clone_20": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13", "SNV17", "SNV8", "SNV18", "SNV20", "SNV6", "SNV15"],
+    "Clone_21": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV16", "SNV14", "SNV19", "SNV23", "SNV9", "SNV13", "SNV17", "SNV8", "SNV18", "SNV20", "SNV6", "SNV15", "SNV7"],
+    "Clone_22": ["SNV5", "SNV4", "SNV3", "SNV2"],
+    "Clone_23": ["SNV5", "SNV4", "SNV3", "SNV1"],
+    "Clone_24": ["SNV5", "SNV4", "SNV3", "SNV21", "SNV22", "SNV10", "SNV12", "SNV11", "SNV0"]
+  }
+}

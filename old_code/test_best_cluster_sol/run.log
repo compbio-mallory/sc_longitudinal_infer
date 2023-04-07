@@ -1,0 +1,69 @@
+# Get the consensus genotype from the Clustering results
+for i in ./default_mr/*; do
+        simDataType=$(echo $i| cut -d'/' -f 2)
+        if [[ "simDataType" =~ .*"mr"*. ]]; then
+                #echo $simDataType
+                for k in `seq 1 5`; do
+                        for j in `seq 1 5`; do
+                                fileName=$simDataType'_'rep$k'_'m$j
+				#echo $fileName
+                                python gen_bnpc_getGmatrix.py -cc $simDataType/rep$k/m$j/assignment.txt -gp $simDataType/rep$k/m$j/genotypes_posterior_mean.tsv -celltp sim_input/$simDataType/rep$k/'default_'rep$k.SNVcell.csv -doublet false -op sim_consensus_genotype/$fileName.G
+                        done
+                done
+        fi
+done
+
+# Get the input for longitudinal tree algo from the bnpc Clustering results
+for i in ./default_mr/*; do
+        simDataType=$(echo $i| cut -d'/' -f 2)
+	#echo $simDataType
+        for k in `seq 1 5`; do
+		for j in `seq 1 5`; do
+                	fileName=$simDataType'_'rep$k'_'m$j
+			#echo $fileName
+                	python inputForTree.py -cc $simDataType/rep$k/m$j/assignment.txt -cg sim_consensus_genotype/$fileName.G.tsv -sim false -celltp sim_input/$simDataType/rep$k/'default_'rep$k.SNVcell.csv -op sim_input_ForTree/$simDataType'_'rep$k'_'m$j.Gprime.csv -ccop sim_input_ForTree/$simDataType'_'rep$k'_'m$j.npy
+                done
+        done
+done
+
+# Run the longitudinal tree and save the results
+for k in `seq 1 5`; do
+	for j in `seq 1 5`; do
+		fileName='default_mr_'rep$k'_'m$j 
+		#echo $fileName
+		python longitudinalTree.py -input sim_input_ForTree/'default_mr_'rep$k'_'m$j'.Gprime.csv' -cg sim_consensus_genotype/'default_mr_'rep$k'_'m$j'.G.tsv' -cc sim_input_ForTree/'default_mr_'rep$k'_'m$j'.npy' -D sim_input/default_mr/rep$k/default_rep$k.D.csv -celltp sim_input/default_mr/rep$k/default_rep$k.SNVcell.csv -alpha 0.01 -beta 0.1 -sim false -op_tree default_mr_op/$fileName'_tree.csv'
+	done
+done
+
+# Run the following to get the best clustering result and save the best tree
+for k in `seq 1 5`; do
+		python selectBestCluster.py -tree default_mr_op/'default_mr_'rep$k'_m1_tree.csv' default_mr_op/'default_mr_'rep$k'_m2_tree.csv' default_mr_op/'default_mr_'rep$k'_m3_tree.csv' default_mr_op/'default_mr_'rep$k'_m4_tree.csv' default_mr_op/'default_mr_'rep$k'_m5_tree.csv' -bnpcOp default_mr/rep$k
+done
+
+# Separate thread with Estimated FP and FN rate -------------------------------------------------------------------------------------------
+
+# Get the estimated FP FN rates from BnpC
+for k in `seq 1 5`; do
+        for j in `seq 1 5`; do
+		fileName='default_mr_'rep$k'_'m$j
+		echo $fileName
+		python getEstimatedFPFN.py -G sim_consensus_genotype/$fileName'.G.tsv' -D sim_input/default_mr/rep$k/'default_'rep$k'.D.csv' -op default_mr/rep$k/$fileName'.npy'
+	done
+done	
+
+# Run the longitudinal tree after getting the estimated FP FN rate from the BnpC
+for k in `seq 1 5`; do
+        for j in `seq 1 5`; do
+                fileName='default_mr_'rep$k'_'m$j
+                #echo $fileName
+                python longitudinalTree.py -input sim_input_ForTree/'default_mr_'rep$k'_'m$j'.Gprime.csv' -cg sim_consensus_genotype/'default_mr_'rep$k'_'m$j'.G.tsv' -cc sim_input_ForTree/'default_mr_'rep$k'_'m$j'.npy' -D sim_input/default_mr/rep$k/default_rep$k.D.csv -celltp sim_input/default_mr/rep$k/default_rep$k.SNVcell.csv -FPFN default_mr/rep$k/$fileName'.npy' -sim false -op_tree tree_fpfn/$fileName'_tree.csv'
+        done
+done
+
+# Run the following to get the best clustering result and save the best tree
+for k in `seq 1 5`; do
+                python selectBestCluster.py -tree tree_fpfn/'default_mr_'rep$k'_m1_tree.csv' tree_fpfn/'default_mr_'rep$k'_m2_tree.csv' tree_fpfn/'default_mr_'rep$k'_m3_tree.csv' tree_fpfn/'default_mr_'rep$k'_m4_tree.csv' tree_fpfn/'default_mr_'rep$k'_m5_tree.csv' -bnpcOp default_mr/rep$k
+done
+
+# Run the following to get a visualization of the tree
+python visualizeTree.py -tree bestTree/default_mr_rep1_m4_tree.csv -cloneNode bestTree/default_mr_rep4_m3_cloneNode.npy -cloneCells bestTree/default_mr_rep4_m3_cloneCells.npy -pngFile test.png

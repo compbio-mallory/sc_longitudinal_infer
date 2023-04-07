@@ -1,0 +1,120 @@
+# Make directory for each repetition and multiple runs of each repetitions as well
+for i in ./sim_input/*; do
+        simDataType=$(echo $i| cut -d'/' -f 3)
+        #echo $simDataType
+        mkdir sim_output/$simDataType
+        for k in `seq 1 5`; do
+                mkdir sim_output/$simDataType/rep$k;
+		for j in `seq 1 5`; do
+			mkdir sim_output/$simDataType/rep$k/m$j;
+		done
+        done
+done
+
+conda activate pythonenv
+
+# Process the sim input files for bnpc
+for i in ./sim_input/*; do
+        echo $i
+        simDataType=$(echo $i| cut -d'/' -f 3)
+        echo $simDataType
+        for k in `seq 1 5`; do
+                for j in ./sim_input/$simDataType/rep$k/*D.csv; do
+                        python processSimInput.py -input $j -output ./sim_input/$simDataType/rep$k
+                done
+        done
+done
+
+# Run BnpC for 5 times for each dataset
+for i in ./sim_input/*; do
+        simDataType=$(echo $i| cut -d'/' -f 3)
+        #simDataType='default_mr' # Uncomment the above line and comment this line when running for all files.
+        for k in `seq 1 5`; do
+                for j in ./sim_input/$simDataType/rep$k/*D.tsv; do
+                        #echo $j
+                        for z in `seq 1 5`; do
+                                echo "time python ../../BnpC/run_BnpC.py $j -o ./sim_output/$simDataType/rep$k/m$z" >> sim_run_bnpc_mr.sh;
+                                echo "#" >> sim_run_bnpc_mr.sh
+                        done
+                done
+        done
+done
+
+python gen_jobs.py -input sim_run_bnpc_mr.sh -n 2 -mem_per_cpu 4GB -p fan_q -algo bnpc -sim true
+
+# Run the slurm files and ignore from 150 to 174 because those are default files for which we have already tested.
+for i in `seq 402 500`; do sbatch sim_run_bnpc_mr.$i.slurm; done
+
+# Get the consensus genotype from the Clustering results
+# Maybe delete the 'default' folder for now and copy it from the 'test_best_cluster_solution' folder
+for i in ./sim_output/*; do
+        simDataType=$(echo $i| cut -d'/' -f 3)
+        #echo $simDataType
+        for k in `seq 1 5`; do
+               for j in `seq 1 5`; do
+			fileName=$simDataType'_'rep$k'_'m$j
+			timeFile=sim_output/$simDataType/rep$k/m$j/time_process.txt
+                        #echo $fileName
+                        if [[ $simDataType == "t4" ]] || [[ $simDataType == "t5" ]] || [[ $simDataType == "default" ]]; then
+				time python gen_bnpc_getGmatrix.py -cc sim_output/$simDataType/rep$k/m$j/assignment.txt -gp sim_output/$simDataType/rep$k/m$j/genotypes_posterior_mean.tsv -celltp sim_input/$simDataType/rep$k/$simDataType'_'rep$k.SNVcell.csv -doublet false -op sim_consensus_genotype/$fileName.G >> $timeFile
+			else
+                        	time python gen_bnpc_getGmatrix.py -cc sim_output/$simDataType/rep$k/m$j/assignment.txt -gp sim_output/$simDataType/rep$k/m$j/genotypes_posterior_mean.tsv -celltp sim_input/$simDataType/rep$k/'input_'$simDataType'_'rep$k.SNVcell.csv -doublet false -op sim_consensus_genotype/$fileName.G >> $timeFile
+			fi
+               done
+        done
+done
+
+# Get the input for longitudinal tree algo from the bnpc Clustering results
+for i in ./sim_output/*; do
+        simDataType=$(echo $i| cut -d'/' -f 3)
+        #echo $simDataType
+        for k in `seq 1 5`; do
+                for j in `seq 1 5`; do
+                        fileName=$simDataType'_'rep$k'_'m$j
+                        #echo $fileName
+                        if [[ $simDataType == "t4" ]] || [[ $simDataType == "t5" ]] || [[ $simDataType == "default" ]]; then
+				time python inputForTree.py -cc sim_output/$simDataType/rep$k/m$j/assignment.txt -cg sim_consensus_genotype/$fileName.G.tsv -sim false -celltp sim_input/$simDataType/rep$k/$simDataType'_'rep$k.SNVcell.csv -op sim_input_ForTree/$simDataType'_'rep$k'_'m$j.Gprime.csv -ccop sim_input_ForTree/$simDataType'_'rep$k'_'m$j.npy >> sim_output/$simDataType/rep$k/m$j/time_process.txt
+			else
+                        	time python inputForTree.py -cc sim_output/$simDataType/rep$k/m$j/assignment.txt -cg sim_consensus_genotype/$fileName.G.tsv -sim false -celltp sim_input/$simDataType/rep$k/'input_'$simDataType'_'rep$k.SNVcell.csv -op sim_input_ForTree/$simDataType'_'rep$k'_'m$j.Gprime.csv -ccop sim_input_ForTree/$simDataType'_'rep$k'_'m$j.npy >> sim_output/$simDataType/rep$k/m$j/time_process.txt
+                        fi
+                done
+        done
+done
+
+# Get the Estimated FP FN rate for the multiple BnpC runs
+for i in ./sim_output/*; do
+        simDataType=$(echo $i| cut -d'/' -f 3)
+	for k in `seq 1 5`; do
+		for j in `seq 1 5`; do
+			fileName=$simDataType'_'rep$k'_'m$j
+			if [[ $simDataType == "t4" ]] || [[ $simDataType == "t5" ]] || [[ $simDataType == "default" ]]; then
+				time python getEstimatedFPFN.py -G sim_consensus_genotype/$fileName'.G.tsv' -D sim_input/$simDataType/rep$k/$simDataType'_'rep$k'.D.csv' -op sim_output/$simDataType/rep$k/m$j/$fileName'_FPFN.npy' >> sim_output/$simDataType/rep$k/m$j/time_process.txt
+			else
+				time python getEstimatedFPFN.py -G sim_consensus_genotype/$fileName'.G.tsv' -D sim_input/$simDataType/rep$k/'input_'$simDataType'_'rep$k'.D.csv' -op sim_output/$simDataType/rep$k/m$j/$fileName'_FPFN.npy' >> sim_output/$simDataType/rep$k/m$j/time_process.txt
+			fi
+		done
+	done
+done
+
+# Get the longitudinal tree for all runs of BnpC after getting the estimated FP FN rate from the BnpC
+for i in ./sim_output/*; do
+	simDataType=$(echo $i| cut -d'/' -f 3)
+	for k in `seq 1 5`; do
+		for j in `seq 1 5`; do
+			fileName=$simDataType'_'rep$k'_'m$j
+			if [[ $simDataType == "t4" ]] || [[ $simDataType == "t5" ]] || [[ $simDataType == "default" ]]; then
+				time python longitudinalTree.py -input sim_input_ForTree/$fileName'.Gprime.csv' -cg sim_consensus_genotype/$fileName'.G.tsv' -cc sim_input_ForTree/$fileName'.npy' -D sim_input/$simDataType/rep$k/$simDataType'_'rep$k'.D.csv' -celltp sim_input/$simDataType/rep$k/$simDataType'_'rep$k.SNVcell.csv -FPFN sim_output/$simDataType/rep$k/m$j/$fileName'_FPFN.npy' -sim false -op_tree all_trees/$fileName'_tree.csv' -cloneNode all_trees/$fileName'_cloneNode.npy' -cloneCells all_trees/$fileName'_cloneCells.npy' >> sim_output/$simDataType/rep$k/m$j/time_process.txt
+			else
+				time python longitudinalTree.py -input sim_input_ForTree/$fileName'.Gprime.csv' -cg sim_consensus_genotype/$fileName'.G.tsv' -cc sim_input_ForTree/$fileName'.npy' -D sim_input/$simDataType/rep$k/'input_'$simDataType'_'rep$k'.D.csv' -celltp sim_input/$simDataType/rep$k/'input_'$simDataType'_'rep$k.SNVcell.csv -FPFN sim_output/$simDataType/rep$k/m$j/$fileName'_FPFN.npy' -sim false -op_tree all_trees/$fileName'_tree.csv' -cloneNode all_trees/$fileName'_cloneNode.npy' -cloneCells all_trees/$fileName'_cloneCells.npy'  >> sim_output/$simDataType/rep$k/m$j/time_process.txt
+			fi
+		done
+	done
+done
+
+# Get the best tree after selecting the best clustering results
+for i in ./sim_output/*; do
+	simDataType=$(echo $i| cut -d'/' -f 3)
+	for k in `seq 1 5`; do
+		time python selectBestCluster.py -tree all_trees/$simDataType'_'rep$k'_m1_tree.csv' all_trees/$simDataType'_'rep$k'_m2_tree.csv' all_trees/$simDataType'_'rep$k'_m3_tree.csv' all_trees/$simDataType'_'rep$k'_m4_tree.csv' all_trees/$simDataType'_'rep$k'_m5_tree.csv' -bnpcOp sim_output/$simDataType/rep$k >> sim_output/$simDataType/rep$k/m$j/time_process.txt
+	done
+done

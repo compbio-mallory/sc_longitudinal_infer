@@ -1,0 +1,11 @@
+Job ID: 7571864
+Cluster: production
+User/Group: rk18g/rk18g
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 4
+CPU Utilized: 00:00:05
+CPU Efficiency: 0.05% of 02:50:52 core-walltime
+Job Wall-clock time: 00:42:43
+Memory Utilized: 449.90 MB
+Memory Efficiency: 1.37% of 32.00 GB

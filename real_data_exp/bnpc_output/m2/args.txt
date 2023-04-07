@@ -1,0 +1,32 @@
+input: SA501/bnpcInput.D.tsv
+transpose: True
+debug: False
+falseNegative_mean: 0.2
+falseNegative_std: 0.1
+falsePositive_mean: 0.01
+falsePositive_std: 0.01
+DPa_prior: [-1, -1]
+param_prior: [0.25, 0.25]
+fixed_assignment: 
+chains: 1
+steps: [5001]
+runtime: -1
+lugsail: -1
+burn_in: 0.33
+conc_update_prob: 0.25
+error_update_prob: 0.25
+split_merge_prob: 0.33
+split_merge_steps: 3
+split_merge_ratios: [0.75, 0.25]
+estimator: ['posterior']
+single_chains: False
+seed: -1
+output: bnpc_output/m2/
+verbosity: 1
+no_plots: False
+tree: 
+true_clusters: 
+true_data: 
+time: ['20230313_20:31:18', '20230313_20:35:41']
+chain_seeds: [1950181592]
+PSRF: 1.0053895198660185
