@@ -222,6 +222,7 @@ def calculate_precision_recall(gt_tp_mutations, lg_tp_mutations):
         recall = 0
     else:
         recall = TP / (TP + FN)
+
     print(" Total Precision ",precision)
     print(" Total Recall ",recall)
     accuracy = (2 * precision * recall) / (precision + recall)
@@ -271,7 +272,7 @@ parser.add_argument("-gtTree", "--gtTree",dest ="gtTree", help="Ground truth tre
 parser.add_argument("-lgTree","--lgTree",dest="lgTree", help="Longitudinal tree inferred from the algorithm")
 parser.add_argument("-cg","--cg",dest="cg", help="BnpC's inferred Gprime or consensus genotype")
 parser.add_argument("-clone","--clone",dest="clone", help="Clones mapped to the inferred longitudinal tree")
-parser.add_argument("-lace","--lace",dest="lace", help="LACE file is passed or not for evaluation. Value is true or false.")
+parser.add_argument("-lace","--lace",dest="lace", help="LACE file is passed or not for evaluation. Value is true or false.") # The lace argument can be used for all other algorithms
 parser.add_argument("-laceFile","--laceFile",dest="laceFile", help="LACE file having the mutations in each timepoint")
 args = parser.parse_args()
 

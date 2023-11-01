@@ -1,5 +1,0 @@
-python input_for_tree.py -input ./examples/example_input_D.tsv -gp ./examples/example_genotype_posterior.tsv -cellCluster ./examples/example_cellToCluster.json -timepoints ./examples/example_cell_timepoints.json
-
-python longitudinalTree.py -input ./examples/example_InputGprime.tsv -inputType matrix
-
-

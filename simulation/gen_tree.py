@@ -120,16 +120,18 @@ def get_multiSplit_edgeLength(t1,t2):
     print(" Multisplit Edges ",t_1, t_2)
     return t_1, t_2
 
-def gen_tree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta):
-   
-    # add a root (node 0) to the tree
-    # edge length (there are at most 2*n - 1))
-    #            | CN0
-    #          node 0
-    #        / CN1   \ CN2
-    #    node 1    node 2
+# Checks if all nodes at a timepoint are dead
+def checkIfAllNodes_Dead(tp_nodes, Tree):
+    noOfNodes = len(tp_nodes)
+    deadNodes = 0
+    for node in tp_nodes:
+        if Tree[node].if_leaf == -1:
+            deadNodes = deadNodes+1
+    if deadNodes == noOfNodes:
+        return True
 
-    #Contructing the phylogeny
+# First get the root node and split it into two unobserved nodes
+def initializeTree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta):
     Tree = []
     Tree.append(treenode(0))
     Tree[0].perc = 1
@@ -142,7 +144,7 @@ def gen_tree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta):
     # The multisplit happens here based on the values of v1, v2, u. A root node will always have one multisplit.
     Tree.append(treenode(1))
     Tree.append(treenode(2))
-       
+
     # set parent ID
     Tree[1].parentID = 0
     Tree[2].parentID = 0
@@ -153,8 +155,8 @@ def gen_tree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta):
     # set perc
     Bi = np.random.beta(float(Alpha+1),float(Beta+1),1) # Beta distribution for the nodes.
     Tree[1].perc = Bi[0]
-    Tree[2].perc = 1 - Bi[0] 
-    
+    Tree[2].perc = 1 - Bi[0]
+
     Tree[1].if_leaf = 1 # This condition required to split the nodes further
     Tree[2].if_leaf = 1
     # set depth
@@ -173,21 +175,40 @@ def gen_tree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta):
     tp_depth = 1.5 # tp_depth represents the current timepoint. At this stage, we finished for root in t = 1.
     #node_oneSplit = set()
     tp_multiSplit = set()
+    return Tree, tp_depth, tp_nodes, node_number, tp_multiSplit
+
+def gen_tree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta):
+   
+    # add a root (node 0) to the tree
+    # edge length (there are at most 2*n - 1))
+    #            | CN0
+    #          node 0
+    #        / CN1   \ CN2
+    #    node 1    node 2
+
+    #Contructing the phylogeny
+    Tree, tp_depth, tp_nodes, node_number, tp_multiSplit = initializeTree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta)
 
     while tp_depth < float(timepoints): # Replace the tree_W with depth condition
         print(" Depth of tree ",tp_depth)
         tp_nodes_list = tp_nodes.get(tp_depth)
         print(tp_nodes)
+
+        # Before proceeding any further check if all nodes in a timepoint are already dead before final timepoint. If yes, then restart the process.
+        if checkIfAllNodes_Dead(tp_nodes_list, Tree):
+            print(" ENCOUNTERED ALL DEAD NODES AT A TIMEPOINT!! RESTARTING THE PROCESS.")
+            Tree, tp_depth, tp_nodes, node_number, tp_multiSplit = initializeTree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta)
+            continue
+
         tp_x = np.random.uniform(0.0,1.0) # This value is used to determine if a node at any timepoint will have a multisplit if tp_x < u.
 
         for i in tp_nodes_list: # Use the tp -> nodes dict to generate the tree
-
             node = Tree[i]
             node_x = np.random.uniform(0.0,1.0) # node_x is checked against v1 and v2.
-            print(" x value of node ",node.getID()," ",node_x)
+            print(" x value of node ",node.getID()," ",node_x," leaf value ",node.if_leaf)
             #print(node.is_dead," ",not node.is_dead)
-
-            if node_x < v1: # node dies in this condition. This is not done and needs more thought.
+    
+            if node_x < v1 and node.if_leaf != -1: # node dies in this condition. This is not done and needs more thought.
                 print(" Inside dead node condition ... ")
                 Tree[i].if_leaf = -1
                 Tree[i].mut = True
@@ -303,8 +324,8 @@ def gen_tree(Beta, Alpha, timepoints, time_values, v1, v2, u, theta):
                     temp_node_list.append(node_number-1)
                     tp_nodes[tp_depth] = temp_node_list
                     #break
-            #else:
-            #    continue
+            else:
+                continue
             #elif node.if_leaf and 
                 
     return Tree

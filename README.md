@@ -1,3 +1,15 @@
+# scLongTree
+Computational tool to infer longitudinal tree for scDNAseq data
+
+## Table of Contents
+- [Commands to run BnpC, scLongTree, getting SNV placements for all tools, evaluation and simulation.](#commands_3methods)
+    * [BnpC](#bnpc)
+    * [scLongTree](#scLongTree)
+    * [SNV placements](#scclone)
+    * [Evaluation](#rcclone)
+    * [Simulation](#scite)
+
+
 # sc_longitudinal_infer
 
 algorithm - has the recent implemented longitudinal algorithm

@@ -1,27 +1,20 @@
-# First get the processed Input file to run BnpC on the data
-python processRealData.py -input SA501/merged.tsv -output  SA501/bnpcInput.D.tsv
-
-# First run BnpC on the data
-for i in 'seq 0 4'; do rd_bnpc.$i.slurm; done
-
+# First get the processed Input file to run any clustering algorithm on the data
+# Then run the other clustering algorithm on the data
 # Then to get the input for the longitudinal tree we need to get the cells at each timepoints.
+
 # We get that using tthe following script
-python SA501/getCellTimePoints.py 
+#python SA501/getCellTimePoints.py 
 
-# Then we run the following script to get the input for the longitudinal tree algorithm
-for i in `seq 1 5`; do
-	python inputForTree.py -cc bnpc_output/m$i/assignment.txt -cg bnpc_InGenotype/m$i'.G.tsv' -sim false -celltp SA501/cell_timepoints.csv -op inputForTree/m$i'.Gprime.csv' -ccop inputForTree/m$i'.npy'
-done
+# Get the consensus genotype from any clustering algorithm. Explain the format of the consensus genotype to use.
+# Here we use the following script to get the consensus genotype from BnpC
+#python gen_bnpc_getGmatrix.py -cc SA501_bnpc_output/m1/assignment.txt -gp SA501_bnpc_output/m1/genotypes_posterior_mean.tsv -celltp SA501/SA501.cell_timepoints.csv -doublet false -op SA501_bnpc_InGenotype/m1'.G'
 
-# Then get the Estimated False postive and False negative rates
-for i in `seq 1 5`; do
-	python getEstimatedFPFN.py -G bnpc_InGenotype/m$i'.G.tsv' -D SA501/input.D.csv -op bnpc_output/m$i/'FP_FNrate.npy'
-done
+# Then we run the following script to get the input for the longitudinal tree algorithm which is by stratifying the clusters across timepoints
+# Please use the output from your clustering algorithm
+python inputForTree.py -cc SA501_bnpc_output/m1/assignment.txt -cg SA501_bnpc_InGenotype/m1'.G.tsv' -sim false -celltp SA501/SA501.cell_timepoints.csv -op SA501_inputForTree/m1'.Gprime.csv' -ccop SA501_inputForTree/m1'.npy'
 
-# Then run the longitudinal tree algorithm
-for i in `seq 1 5`; do
-	python longitudinalTree.py -input inputForTree/m$i'.Gprime.csv' -cg bnpc_InGenotype/m$i'.G.tsv' -cc inputForTree/m$i'.npy' -D SA501/input.D.csv -celltp SA501/cell_timepoints.csv -FPFN bnpc_output/m$i/'FP_FNrate.npy' -sim false -op_tree inferredTree/m$i'_tree.csv' -cloneNode inferredTree/m$i'_cloneNode.npy' -cloneCells inferredTree/m$i'_cloneCells.npy'
-done
+# Then run our algorithm to infer the tree given the clustering results
+python longitudinalTree.py -input inputForTree/m1'.Gprime.csv' -cg bnpc_InGenotype/m1'.G.tsv' -cc inputForTree/m1'.npy' -D SA501/input.D.csv -celltp SA501/cell_timepoints.csv -sim false -op_tree inferredTree/m1'_tree.csv' -cloneNode inferredTree/m1'_cloneNode.npy' -cloneCells inferredTree/m1'_cloneCells.npy'
 
-# Then select the best cluster and compare the tree with LACE's real data result
-python selectBestCluster.py -tree inferredTree/'m1_tree.csv' inferredTree/'m2_tree.csv' inferredTree/'m3_tree.csv' inferredTree/'m4_tree.csv' inferredTree/'m5_tree.csv' -bnpcOp bnpc_output
+# Then select the tree with least no. of back and parallel mutations given the multiple runs
+python selectBestClusterAndTree.py -tree inferredTree/'m1_tree.csv' inferredTree/'m2_tree.csv' inferredTree/'m3_tree.csv' inferredTree/'m4_tree.csv' inferredTree/'m5_tree.csv'

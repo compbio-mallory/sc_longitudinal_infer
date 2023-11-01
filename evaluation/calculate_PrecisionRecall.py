@@ -47,8 +47,19 @@ def update_node_mut(gt_node_mut,child_parent):
         if int(child) == 0:
             continue
         child_mut = gt_node_mut[child]
-        parent_mut = gt_node_mut[parent]
-        child_mut.extend(parent_mut)
+        if ',' in parent:
+            parent_list = parent.split(',')
+            parent_mut = []
+            for p in parent_list:
+                parent_mut.extend(gt_node_mut[p])
+        else:
+            parent_mut = gt_node_mut[parent]
+
+        if len(child_mut) == 1 and child_mut[0] == '': # Check for empty mutations which shouldn't be the case here.
+            child_mut = []
+            child_mut.extend(list(set(parent_mut)))
+        else:
+            child_mut.extend(list(set(parent_mut)))
         gt_node_mut[child] = child_mut
         #if set(child_mut) == set(parent_mut):
             #print("Child ",child," Parent ",parent)
@@ -79,7 +90,7 @@ def get_tp_mutations(node_mut, node_timepoint, dead_nodes):
         if node in dead_nodes:
             continue
         node_tp = float(node_timepoint[node])
-        #print(node)
+        #print("Node ",node," Mut ",mut)
         #if not node_tp%1 == 0:
         #    print(node_tp)
         #    node_tp = node_tp - 0.5
@@ -189,9 +200,11 @@ def get_mutations_fromCG(cgFile, clones_nodes):
     #timepoint_mutation = get_updated_mutations_forCG(timepoint_mutation)
     return timepoint_mutation
 
-''' Compare inferred tree mutations with ground truth mutations and calculate precision, recall. '''
+''' Calculate the precision and recall of the whole tree. '''
 def calculate_precision_recall(gt_tp_mutations, lg_tp_mutations):
-    timepoint_precision_recall = {}
+    TP = 0
+    FP = 0
+    FN = 0
     for timepoint, mutations in gt_tp_mutations.items():
         print(" Timepoint ",timepoint)
         mutations = [int(i) for i in mutations]
@@ -200,6 +213,39 @@ def calculate_precision_recall(gt_tp_mutations, lg_tp_mutations):
         #print(" Int mutations ",mutations)
         if timepoint in lg_tp_mutations:
             lg_mut = lg_tp_mutations[timepoint]
+        lg_mut = [int(i) for i in lg_mut]
+        set_lg_mut = set(lg_mut)
+        print(" LG mutations ",set_lg_mut)
+        TP = TP+len(set_mutations.intersection(set_lg_mut))
+        FP = FP+len(set_lg_mut - set_mutations)
+        FN = FN+len(set_mutations - set_lg_mut)
+        print(" TP ",TP," FP ",FP," FN ",FN)
+        
+    if TP + FP == 0:
+        precision = 0
+    else:
+        precision = TP / (TP + FP)
+    if TP + FN == 0:
+        recall = 0
+    else:
+        recall = TP / (TP + FN)
+    print(" Total Precision ",precision)
+    print(" Total Recall ",recall)
+    accuracy = (2 * precision * recall) / (precision + recall)
+    print(" Accuracy ",accuracy)
+
+''' Compare inferred tree mutations with ground truth mutations and calculate precision, recall. '''
+def tp_calculate_precision_recall(gt_tp_mutations, lg_tp_mutations):
+    timepoint_precision_recall = {}
+    for timepoint, mutations in gt_tp_mutations.items():
+        print(" Timepoint ",timepoint)
+        mutations = [int(i) for i in mutations]
+        set_mutations = set(mutations)
+        print(" GT mutations ",set_mutations)
+        #print(" LG TP mutations ",lg_tp_mutations)
+        if timepoint in lg_tp_mutations:
+            lg_mut = lg_tp_mutations[timepoint]
+        print(" LG mut ",set(lg_mut))
         lg_mut = [int(i) for i in lg_mut]
         set_lg_mut = set(lg_mut)
         print(" LG mutations ",set_lg_mut)
@@ -239,7 +285,7 @@ args = parser.parse_args()
 gt_node_mut = get_nodeMut(args.mut)
 #print(" Node mutations ",gt_node_mut)
 gt_node_timepoint, gt_child_parent, dead_nodes = get_tp_node(args.gtTree)
-#print(" Node timepoint ",gt_node_timepoint)
+print(" Node timepoint ",gt_node_timepoint)
 #print(" Child parent ",gt_child_parent)
 updated_node_mut = update_node_mut(gt_node_mut, gt_child_parent)
 gt_tp_mutations = get_tp_mutations(updated_node_mut, gt_node_timepoint, dead_nodes) # use this if you want edge length to be 0.
@@ -248,11 +294,11 @@ print(" GT Timepoint mutations ",gt_tp_mutations)
 
 lg_node_mut, lg_node_timepoint, lg_child_parent = read_inferred_tree(args.lgTree)
 print("======== Longitudinal Tree ===========")
-#print(" Node mut ",lg_node_mut)
+print(" Node mut ",lg_node_mut)
 #print(" Node timepoint ",lg_node_timepoint)
 #print(" Node child parent ",lg_child_parent)
 updated_lg_node_mut = update_node_mut(lg_node_mut, lg_child_parent)
-#print(" Updated lg mut ",updated_lg_node_mut)
+print(" Updated lg mut ",updated_lg_node_mut)
 lg_tp_mutations = get_tp_mutations(updated_lg_node_mut, lg_node_timepoint, [])
 print(" LG mutations ",lg_tp_mutations)
 
@@ -262,8 +308,11 @@ print(" LG mutations ",lg_tp_mutations)
 #print(" BnpC Timepoint mutations ",bnpc_timepoint_mutation)
 #timepoint_precision_recall = calculate_precision_recall(gt_tp_mutations, bnpc_timepoint_mutation)
 
-timepoint_precision_recall = calculate_precision_recall(gt_tp_mutations,lg_tp_mutations)
+print(" For inferred tree ",args.lgTree)
+timepoint_precision_recall = tp_calculate_precision_recall(gt_tp_mutations,lg_tp_mutations)
+calculate_precision_recall(gt_tp_mutations,lg_tp_mutations)
 print("=============================")
 if args.lace == "true":
     lace_tp_mut = getLACE_mutations(args.laceFile)
-    lace_timepoint_precision_recall = calculate_precision_recall(gt_tp_mutations,lace_tp_mut)
+    lace_timepoint_precision_recall = tp_calculate_precision_recall(gt_tp_mutations,lace_tp_mut)
+    calculate_precision_recall(gt_tp_mutations,lace_tp_mut)

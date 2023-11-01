@@ -1,2 +1,0 @@
-chain	estimator	FN_model	FN_data	FP_model	FP_data
-mean	posterior	0.1334+-0.0133	0.1575	0.00252385+-0.00129262	0.00818825
