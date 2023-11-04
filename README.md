@@ -3,7 +3,7 @@ Computational tool to infer longitudinal tree for scDNAseq data
 
 ## Table of Contents
 - [Commands to run BnpC, scLongTree, getting SNV placements for all tools, evaluation and simulation.](#commands_3methods)
-    * [BnpC](#bnpc)
+    * [Clustering](#clustering)
     * [scLongTree](#scLongTree)
     * [SNV placements](#snvAccuracy)
     * [Evaluation](#evaluation)
@@ -16,7 +16,7 @@ Computational tool to infer longitudinal tree for scDNAseq data
 
 # <a name="commands_3methods"></a>Commands to run BnpC, scLongTree, getting SNV placements for all tools, evaluation and simulation. #
 
-## <a name="bnpc"></a>BnpC ##
+## <a name="clustering"></a>Clustering ##
 
 Since we used BnpC as a clustering algorithm in our pipeline for the evaluation we will briefly list the steps we followed:
 
