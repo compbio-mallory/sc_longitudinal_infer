@@ -3,7 +3,7 @@ Computational tool to infer longitudinal tree for scDNAseq data
 
 ## Table of Contents
 - [Commands to run BnpC, scLongTree, getting SNV placements for all tools, evaluation and simulation.](#commands_3methods)
-    * [BnpC](#bnpc)
+    * [Clustering](#clustering)
     * [scLongTree](#scLongTree)
     * [SNV placements](#snvAccuracy)
     * [Evaluation](#evaluation)
@@ -16,7 +16,7 @@ Computational tool to infer longitudinal tree for scDNAseq data
 
 # <a name="commands_3methods"></a>Commands to run BnpC, scLongTree, getting SNV placements for all tools, evaluation and simulation. #
 
-## <a name="bnpc"></a>BnpC ##
+## <a name="clustering"></a>Clustering ##
 
 Since we used BnpC as a clustering algorithm in our pipeline for the evaluation we will briefly list the steps we followed:
 
@@ -73,25 +73,30 @@ To run the algorithm we have all the necessary scripts in ``` algorithm ``` and 
 ### Steps to run the simulator using different variables. ###
 
 1. To generate the tree with desired parameters use the following script:
-        * ``` python gen_tree.py -T 3 -t_v 15 7 0 -v1 0.2 -v2 0.4 -u 0.2 -B 0.2 -theta 0.2 -o output_tree.csv ```
-        * Parameters:
-                * ```-T``` pass the number of timepoints.
-                * ```-t_v``` years representing the timepoints.
-                * ```-v1``` condition variable to decide distribution of mutations.
-		* ```-v2``` condition variable to decide distribution of mutations.
-		* ```-u``` condition variable deciding unobserved subclones.
-		* ```-B``` beta split variable.
-		* ```-theta``` condition variable to decide if a subclone should have new mutations.
-		* ```-o``` output file.
+   
+   ``` python gen_tree.py -T 3 -t_v 15 7 0 -v1 0.2 -v2 0.4 -u 0.2 -B 0.2 -theta 0.2 -o output_tree.csv ```
+   
+   Parameters:
+   
+   * ```-T``` pass the number of timepoints.
+   * ```-t_v``` years representing the timepoints.
+   * ```-v1``` condition variable to decide distribution of mutations.
+   * ```-v2``` condition variable to decide distribution of mutations.
+   * ```-u``` condition variable deciding unobserved subclones.
+   * ```-B``` beta split variable.
+   * ```-theta``` condition variable to decide if a subclone should have new mutations.
+   * ```-o``` output file.
 
-2. Once we have the tree we can assign cells, mutations and include false positives, false negatives, missing data using the following script:
-        * ``` python sim_par.py -a 0.01 -b 0.2 -m 0.2 -t 3 -mc 1.7 -f output_tree.csv -P outputFilePrefix ```
-        * Parameters:
-                * ```-a``` false positive rate.
-                * ```-b``` false negative rate.
-                * ```-m``` missing rate.
-                * ```-t``` timepoints.
-                * ```-mc``` mutation rate.
-                * ```-f``` the tree generated earlier using number of leaves and beta splitting variable.
-                * ```-P``` the prefix and directory for output files.
+3. Once we have the tree we can assign cells, mutations and include false positives, false negatives, missing data using the following script:
+
+   	``` python sim_par.py -a 0.01 -b 0.2 -m 0.2 -t 3 -mc 1.7 -f output_tree.csv -P outputFilePrefix ```
+   
+   Parameters:
+   * ```-a``` false positive rate.
+   * ```-b``` false negative rate.
+   * ```-m``` missing rate.
+   * ```-t``` timepoints.
+   * ```-mc``` mutation rate.
+   * ```-f``` the tree generated earlier using number of leaves and beta splitting variable.
+   * ```-P``` the prefix and directory for output files.
 
