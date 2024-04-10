@@ -319,58 +319,122 @@ def diffFPFN(old_tp_FP, old_tp_FN, new_tp_FP, new_tp_FN):
 
 ''' Check diff between FP FN rates. If it is too high then we don't drop this spurious subclone. '''
 # Input is FP FN change in each timepoint, timepoint, error rate change allowed
+# If error rates are higher than given threshold then return True to indicate that diff is high and change is not allowed.
 def checkDiff_FPFN(tp_diffFP, tp_diffFN, tp, userRate):
-    #for tp in tp_diffFP:
-    FP = tp_diffFP[tp]
-    FN = tp_diffFN[tp]
-    if abs(FP) >= userRate or abs(FN) >= userRate:
-        return True
+    if tp == "all": # check for diff for all timepoints 
+        for tp in tp_diffFP:
+            FP = tp_diffFP[tp]
+            FN = tp_diffFN[tp]
+            if abs(FP) >= userRate or abs(FN) >= userRate:
+                return True
+    else:
+        FP = tp_diffFP[tp]
+        FN = tp_diffFN[tp]
+        if abs(FP) >= userRate or abs(FN) >= userRate:
+            return True
 
 ''' All the clustering results will are here: Re-assigning cells after dropping clusters, correcting genotype, calculating prob after merging. 
 Returns the updated cluster genotypes and cells assigned to each cluster. '''
 def clusteringResults(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, tp_alpha, tp_beta, tp_MR, cells, cluster, noOfiter):
     # Reassign cells and update the cluster genotype after removing spurious subclone
-    cell_cluster, cluster_genotype = cell_cluster_likelihood(D_matrix, tp_alpha[tp], tp_beta[tp], cells, tp_cluster_genotype[tp], cluster, tp_cluster_cells[tp])
+    cell_cluster, cluster_genotype = cell_cluster_likelihood(D_matrix, tp_alpha[tp], tp_beta[tp], cells, tp_cluster_genotype[tp], cluster, tp_cluster_cells[tp]) 
     # If nothing to reassign then we break with Tree with highest prob
     if cell_cluster == "Done" and cluster_genotype == "Done":
-        return "Done", "Done"
+        return "NA", "NA"
     tp_cluster_cells[tp] = cell_cluster
     # Update new cluster genotypes
     tp_cluster_genotype[tp] = cluster_genotype
     print(" Cluster Genotype before reassigning cells =============== ")
     printMutFromGenotype(tp_cluster_genotype[tp])
-    # After cell reassigning get the updated corrected cluster genotype
+    # After cell reassigning get the updated corrected cluster genotype 
     tp_cluster_cells, tp_cluster_genotype = correctClustering(D_matrix, tp_cluster_cells, tp_alpha, tp_beta)
+
+    # Check here if timepoint error rates differ a lot. If yes then return a value to prevent this subclone from dropping.
+    # tp_alpha, tp_beta = alpha and beta from prev iteration.
+    new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
+    tp_diffFP, tp_diffFN = diffFPFN(tp_alpha, tp_beta, new_tp_FP, new_tp_FN)
+    if checkDiff_FPFN(tp_diffFP, tp_diffFN, tp, 0.05):
+        return "NA", "NA"
+
     print("Cluster Genotype after reassigning cells =============== ")
     printMutFromGenotype(tp_cluster_genotype[tp])
 
     # Prob after merging clones and reassigning cells
-    afterMergeProb = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, tp_alpha, tp_beta, tp_MR)
+    afterMergeProb = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, new_tp_FP, new_tp_FN, tp_MR)
     #print("Tp_cluster_prob ",tp_cluster_prob)
     print(" After merging prob ",afterMergeProb)
     return tp_cluster_genotype, tp_cluster_cells
 
 ''' Correct the parallel and back mutations and return new Tree and corrected cluster genotype. '''
-def correctParallelAndBackMut(D_matrix, tp_cluster_genotype, tp_alpha, tp_beta, Tree, clone_node, k, plotOp, noOfiter, sample):
+def correctParallelAndBackMut(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, tp_alpha, tp_beta, Tree, clone_node, k, plotOp, noOfiter, sample):
     # Fix the parallel and back mutation. After correction the tp_cluster_genotype will change.
     parallel_mut, parallelMut_edges = getParallelMut(Tree)
     backMut_edges = getBackMutCount(Tree)
     plotTree(Tree, parallelMut_edges, backMut_edges,"plots/"+plotOp+"/iter"+str(noOfiter)+"_bc.png", "Iter "+str(noOfiter)+" before correction", sample)
     print(" Parallel edges ",parallelMut_edges)
+    # These are sorted edges
     parallelEdges = finalParallelMutEdges(Tree, parallel_mut, parallelMut_edges, D_matrix, tp_alpha, tp_beta)
-    backEdges = finalBackMutEdges(Tree, backMut_edges, D_matrix, tp_alpha, tp_beta, k)
+    backEdges, sortedBackMut = finalBackMutEdges(Tree, backMut_edges, D_matrix, tp_alpha, tp_beta, k)
+    # Also get sorted back mutation edges here 
     print("Parallel edges ",parallelEdges)
     print("Back edges ",backEdges)
-    Tree = correctParallelMut(Tree, parallelMut_edges, parallelEdges)
-    printTree(Tree)
-    Tree = correctBackMut(Tree, backMut_edges, backEdges)
+
+    # Instead of sending all the mutations just send mutations one by one to the funcs below and check the FP FN rate from the inferred genotype
+    for pm, pe in parallelEdges.items():
+        # Copy old Tree and genotype to revert back if error rate changes
+        prevTree = copy.deepcopy(Tree)
+        prev_tp_cluster_genotype = copy.deepcopy(tp_cluster_genotype)
+
+        Tree = correctParallelMut(Tree, parallelMut_edges, {pm: pe})
+        new_tp_cluster_genotype = genotypeFromTree(Tree, tp_cluster_genotype, clone_node, len(D_matrix[0]))
+        new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, new_tp_cluster_genotype)
+        tp_diffFP, tp_diffFN = diffFPFN(tp_alpha, tp_beta, new_tp_FP, new_tp_FN)
+        # if diff in error > threshold then continue to next mutation without fixing current mutation.
+        # For parallel and back mutation we need to check the change of error rate in each timepoint and decide.
+        if checkDiff_FPFN(tp_diffFP, tp_diffFN, "all", 0.05):
+            print("Parallel mutation not fixed ",pm," in timepoint ",tp)
+            tp_cluster_genotype = prev_tp_cluster_genotype
+            Tree = prevTree
+            # This should fall back to prev tp alpha beta
+            in_tp_FP, in_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
+            print(in_tp_FP," ",in_tp_FN)
+        else:
+            print("Fixed parallel mutation ",pm," in timepoint ",tp)
+            #fixed_tp_FP, fixed_tp_FN = new_tp_FP, new_tp_FN
+            # This will have the new FP FN rates
+            in_tp_FP, in_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
+            print(in_tp_FP," ",in_tp_FN)
+        
+    for bm in sortedBackMut:
+        # Copy old Tree and genotype to revert back if error rate changes
+        prevTree = copy.deepcopy(Tree)
+        prev_tp_cluster_genotype = copy.deepcopy(tp_cluster_genotype)
+
+        Tree = correctBackMut(Tree, {bm: backMut_edges[bm]}, backEdges)
+        new_tp_cluster_genotype = genotypeFromTree(Tree, tp_cluster_genotype, clone_node, len(D_matrix[0]))
+        new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, new_tp_cluster_genotype)
+        tp_diffFP, tp_diffFN = diffFPFN(tp_alpha, tp_beta, new_tp_FP, new_tp_FN)
+        # if diff in error > threshold then continue to next mutation without fixing current mutation
+        if checkDiff_FPFN(tp_diffFP, tp_diffFN, "all", 0.05):
+            print("Back mutation not fixed ",bm)
+            tp_cluster_genotype = prev_tp_cluster_genotype
+            Tree = prevTree
+            continue
+        else:
+            print("Fixed back mutation ",bm)
+
+    #Tree = correctParallelMut(Tree, parallelMut_edges, parallelEdges)
+    #printTree(Tree)
+    #Tree = correctBackMut(Tree, backMut_edges, backEdges)
     Tree = recheckTree(Tree)
     print("========== TREE after correcting PARALLEL and BACK MUTATIONS =========== ")
     printTree(Tree)
+    new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
+    tp_diffFP, tp_diffFN = diffFPFN(tp_alpha, tp_beta, new_tp_FP, new_tp_FN)
 
     # Genotype after correcting parallel and back mutations
     new_tp_cluster_genotype = genotypeFromTree(Tree, tp_cluster_genotype, clone_node, len(D_matrix[0]))
-    return Tree, new_tp_cluster_genotype
+    return Tree, new_tp_cluster_genotype, new_tp_FP, new_tp_FN
 
 ''' Select the tree with the highest probability. '''
 # Input is D_matrix, alpha and beta in each timepoint, cluster probabilities in each timepoint, cells in each cluster, cluster genotypes
@@ -391,9 +455,10 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
     print("No of mutations ",noOfMutations)
     finalClusterCells = tp_cluster_cells
     finalClusterGen = tp_cluster_genotype
+    final_backMut_edges = {}
     print(" ==== Estimated FP FN before eliminating any spurious subclones ==== ")
-    tp_FP, tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
-    print(" Estimated FP ",tp_FP," Estimated FN ",tp_FN)
+    initial_tp_FP, initial_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
+    print(" Estimated FP ",initial_tp_FP," Estimated FN ",initial_tp_FN)
 
     # Before saving the plots remove all exisitng plots including hidden files
     #if os.path.exists("plots/"+plotOp):
@@ -423,12 +488,32 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
             print("Refreshed list ",refresh_tp_cluster_prob)
             for tp_cluster in refresh_tp_cluster_prob:
                 print("Inside refreshed list ")
+                print(" Refreshed iterations ============================== ",noOfiter)
                 tp = int(tp_cluster.split('_')[0])
                 cluster = int(tp_cluster.split('_')[1])
                 print(" Timepoint ",tp," ignore cluster ",cluster)
+                if cluster not in tp_cluster_cells[tp]:
+                    continue
                 cells = tp_cluster_cells[tp][cluster]
-                tp_cluster_genotype, tp_cluster_cells = clusteringResults(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, tp_alpha, tp_beta, tp_MR, cells, cluster, noOfiter)
-                if tp_cluster_genotype == "Done" or tp_cluster_cells == "Done": # Move to next cluster since there are no more clusters to merge in this timepoint
+
+                # old_tp_FP, old_tp_FN are FP FN rates from previous iterations which means it is the updated FP FN rates
+                old_tp_FP, old_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
+                print("Inside refreshed list ")
+                print(" Iteration ",noOfiter," old FP ",old_tp_FP," old FN ",old_tp_FN)
+
+                # Since these variables are changed in other classes I keep a copy to revert them
+                prev_tp_cluster_genotype = copy.deepcopy(tp_cluster_genotype)
+                prev_tp_cluster_cells = copy.deepcopy(tp_cluster_cells)
+                print("Error rates used for updating all changes ",tp_alpha," ",tp_beta)
+
+                # check here if FP FN error rate diff is large. If yes then don't drop the subclone and continue to the next.
+                tp_cluster_genotype, tp_cluster_cells = clusteringResults(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, old_tp_FP, old_tp_FN, tp_MR, cells, cluster, noOfiter)
+                
+                # Move to the next cluster since there are no more clusters or dropping this subclone will result in higher error rate
+                if tp_cluster_genotype == "NA" or tp_cluster_cells == "NA":
+                    print("Cluster not dropped ",cluster," in timepoint ",tp)
+                    tp_cluster_genotype = prev_tp_cluster_genotype
+                    tp_cluster_cells = prev_tp_cluster_cells
                     continue
 
                 # Get the Tree
@@ -436,12 +521,13 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                 print(" Before correction iteration ",noOfiter," Clone node ",clone_node)
 
                 # Fix the parallel and back mutation. After correction the tp_cluster_genotype will change.
-                Tree, new_tp_cluster_genotype = correctParallelAndBackMut(D_matrix, tp_cluster_genotype, tp_alpha, tp_beta, Tree, clone_node, k, plotOp, noOfiter, sample)
+                Tree, tp_cluster_genotype, new_tp_FP, new_tp_FN = correctParallelAndBackMut(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, old_tp_FP, old_tp_FN, Tree, clone_node, k, plotOp, noOfiter, sample)
 
                 # After updating the Tree get set of new FP FN
-                new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, new_tp_cluster_genotype)
+                #new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
                 print("=========== DIFF FP FN ===============")
                 tp_diffFP, tp_diffFN = diffFPFN(old_tp_FP, old_tp_FN, new_tp_FP, new_tp_FN)
+                # Here if diff is large then prevent dropping this subclone
 
                 # Plot Tree after parallel and back mutation correction
                 new_backMut_edges = getBackMutCount(Tree)
@@ -450,17 +536,19 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
 
                 #print(" Cells in each TP cluster ",tp_cluster_cells)
 
-                new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, new_tp_cluster_genotype, D_matrix, tp_alpha, tp_beta, tp_MR)
+                new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, new_tp_FP, new_tp_FN, tp_MR)
                 print("After correction Iteration ",noOfiter," Clone node ",clone_node)
                 print("Tp_cluster_prob ",new_tp_cluster_prob)
 
                 new_tree_prob = calculate_treeProb(new_tp_cluster_prob)
                 print("Tree prob ",tree_prob," New tree prob ",new_tree_prob)
+                noOfiter = noOfiter+1
+
                 if new_tree_prob > tree_prob:
                     tree_prob = new_tree_prob
                     finalTree = Tree
                     finalClusterCells = tp_cluster_cells
-                    finalClusterGen = new_tp_cluster_genotype
+                    finalClusterGen = tp_cluster_genotype
                     final_backMut_edges = new_backMut_edges
                     final_plMut_edges = new_plMut_edges
                     print("FINAL TREE ITERATION INSIDE REFRESH ",noOfiter-1)
@@ -469,7 +557,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                     #print("Back mutations ",final_backMut_edges)
                     # plot the final tree. Last one gets overwritten
                     plotTree(finalTree, final_plMut_edges, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_bc.png", "Final Tree",sample)
-                    eliminated_clusters.append(tp_cluster)
+                    #eliminated_clusters.append(tp_cluster)
                     break
                 else:
                     print("=========== TREE NOT SELECTED =============")
@@ -486,15 +574,22 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
             cluster = int(tp_cluster.split('_')[1])
             print(" Timepoint ",tp," ignore cluster ",cluster)
             # save the cluster genotype before correction to use it later
-            tp_cg_beforeCorr = copy.deepcopy(tp_cluster_genotype)
-            tp_cc_beforeCorr = copy.deepcopy(tp_cluster_cells)
+            #tp_cg_beforeCorr = copy.deepcopy(tp_cluster_genotype)
+            #tp_cc_beforeCorr = copy.deepcopy(tp_cluster_cells)
 
             old_tp_FP, old_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
+            print(" Outside refreshed list ")
             print(" Iteration ",noOfiter," old FP ",old_tp_FP," old FN ",old_tp_FN)
 
+            prev_tp_cluster_genotype = copy.deepcopy(tp_cluster_genotype)
+            prev_tp_cluster_cells = copy.deepcopy(tp_cluster_cells)
+            print("Error rates used for updating all changes ",tp_alpha," ",tp_beta)
+
             cells = tp_cluster_cells[tp][cluster]
-            tp_cluster_genotype, tp_cluster_cells = clusteringResults(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, tp_alpha, tp_beta, tp_MR, cells, cluster, noOfiter)
-            if tp_cluster_genotype == "Done" and tp_cluster_cells == "Done":
+            tp_cluster_genotype, tp_cluster_cells = clusteringResults(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, old_tp_FP, old_tp_FN, tp_MR, cells, cluster, noOfiter)
+            if tp_cluster_genotype == "NA" and tp_cluster_cells == "NA":
+                tp_cluster_genotype = prev_tp_cluster_genotype
+                tp_cluster_cells = prev_tp_cluster_cells
                 continue
 
             # Get the Tree 
@@ -502,10 +597,10 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
             print(" Before correction iteration ",noOfiter," Clone node ",clone_node)
         
             # Fix the parallel and back mutation. After correction the tp_cluster_genotype will change. 
-            Tree, new_tp_cluster_genotype = correctParallelAndBackMut(D_matrix, tp_cluster_genotype, tp_alpha, tp_beta, Tree, clone_node, k, plotOp, noOfiter, sample)
+            Tree, tp_cluster_genotype, new_tp_FP, new_tp_FN = correctParallelAndBackMut(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, old_tp_FP, old_tp_FN, Tree, clone_node, k, plotOp, noOfiter, sample)
 
             # After updating the Tree get set of new FP FN
-            new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, new_tp_cluster_genotype)
+            #new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
             print("=========== DIFF FP FN ===============")
             tp_diffFP, tp_diffFN = diffFPFN(old_tp_FP, old_tp_FN, new_tp_FP, new_tp_FN)
         
@@ -516,7 +611,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
 
             #print(" Cells in each TP cluster ",tp_cluster_cells)
         
-            new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, new_tp_cluster_genotype, D_matrix, tp_alpha, tp_beta, tp_MR)
+            new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, new_tp_FP, new_tp_FN, tp_MR)
             print("After correction Iteration ",noOfiter," Clone node ",clone_node)
             print("Tp_cluster_prob ",new_tp_cluster_prob)
 
@@ -528,24 +623,25 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                 tree_prob = new_tree_prob
                 finalTree = Tree
                 finalClusterCells = tp_cluster_cells
-                finalClusterGen = new_tp_cluster_genotype
+                finalClusterGen = tp_cluster_genotype
                 final_backMut_edges = new_backMut_edges
                 final_plMut_edges = new_plMut_edges
                 print("FINAL TREE ITERATION FROM OUTER ",noOfiter-1)
                 refresh_tp_cluster_prob = dict(sorted(new_tp_cluster_prob.items(), key=lambda item: item[1]))
-                #print("Refresh tp cluster prob after final iteration ",refresh_tp_cluster_prob)
+                print("Refresh tp cluster prob after final iteration ",refresh_tp_cluster_prob)
                 #print("Back mutations ",final_backMut_edges)
                 # plot the final tree. Last one gets overwritten
                 plotTree(finalTree, final_plMut_edges, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_bc.png", "Final Tree",sample)
+                #eliminated_clusters.append(tp_cluster)
             else:
                 print("=========== TREE NOT SELECTED =============")
                 printTree(Tree)
                 continue
     # the saved Tree will be the one with highest prob
     print(" ================= FINAL TREE =================== ")
-    finalTree = recheckFinalTree(finalTree)
+    finalTree = recheckFinalTree(finalTree) # In this method try to fix the parallel and back mutations
     printTree(finalTree)
-    plotTree(finalTree, final_plMut_edges, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_ac.png", "Final Tree ", sample)
+    plotTree(finalTree, {}, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_ac.png", "Final Tree ", sample)
     print("Final tree prob ",tree_prob)
     return finalTree, final_backMut_edges, tree_prob
 
