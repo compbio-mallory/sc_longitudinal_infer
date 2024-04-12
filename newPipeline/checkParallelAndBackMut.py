@@ -163,11 +163,9 @@ def selectEdgeParallel(Tree, x, A_x, D_matrix, timepoint_FP, timepoint_FN):
     #Select the edge with maximum R_e.
     #print(" Edge ratio ",edge_ratios)
     #print(" Maximum ratio edge ",max(edge_ratios, key=edge_ratios.get))
-    max_edge = max(edge_ratios, key=edge_ratios.get)
-    max_edgeVal = edge_ratios[max_edge]
-    return max_edge, max_edgeVal 
+    return max(edge_ratios, key=edge_ratios.get)
 
-# Input is tree, back mutation x, edges of the back mutation x B_x, noisy D matrix, \alpha and \beta for timepoints, k = no. of back mutation edges
+# Input is tree, back mutation x, edges of the back mutation x B_x, noisy D matrix, consensus genotype G, \alpha and \beta for timepoints, k = no. of back mutation edges
 # Output is the top k edges with the maximum summation of ratio R_e to allow back mutations.
 ''' Select the top k edges for the back mutation. '''
 def selectBackMutEdges(Tree, x, B_x, D_matrix, timepoint_FP, timepoint_FN, k):
@@ -203,34 +201,6 @@ def selectBackMutEdges(Tree, x, B_x, D_matrix, timepoint_FP, timepoint_FN, k):
     print(" k edges ",kEdges)
     return kEdges
 
-''' For fixing the back mutation get their probability of occurence. We fix them highest to lowest prob. '''
-# Input is Tree, back mutation x, edges of back mutation B_x, noisy D matrix, \alpha and \beta for timepoints
-# Output is edge ratios for the mutations
-def calcBackMutEdgesProb(Tree, x, B_x, D_matrix, timepoint_FP, timepoint_FN):
-    edge_ratios = {} # output dictionary with edge as key and ratio as values
-    for e in B_x:
-        child_node = int(e.split('_')[1])
-        subtree_nodes = subtree(Tree, child_node, x)
-        #print(" Subtree nodes ",subtree_nodes)
-
-        child_node_tp = Tree[child_node].timepoint
-        #child_node_tp = int(getNodeTimepoint(Tree, child_node))
-        node_cells = Tree[child_node].cells
-        #print(" Timepoint ",child_node_tp)
-        # We want to calculate the prob of presence for the back mutation x hence using parallel mutations ratio calculation eq
-        R_e = calculateRatio(node_cells, x, timepoint_FP[child_node_tp], timepoint_FN[child_node_tp], D_matrix, "parallel")
-        for n in subtree_nodes:
-            n_cells = Tree[n].cells
-            n_tp = Tree[n].timepoint
-            #n_tp = int(getNodeTimepoint(Tree, n))
-            #print(" Timepoint ",n_tp)
-            R_n = calculateRatio(n_cells, x, timepoint_FP[n_tp], timepoint_FN[n_tp], D_matrix, "parallel")
-            R_e = R_e * R_n
-
-        #print(" Ratio ",R_e)
-        edge_ratios[e] = R_e
-    return edge_ratios
-
 # Input is cells in a node, parallel mutation x, \alpha and \beta of their respective timepoints, noisy D_matrix, mutation type
 # Output is the ratio R_e for all cells in the node.
 def calculateRatio(cells, x, alpha, beta, D_matrix, type_):
@@ -265,43 +235,21 @@ def calculateRatio(cells, x, alpha, beta, D_matrix, type_):
 # Output is a dictionary with parallel mutation as key and edge as value
 def finalParallelMutEdges(Tree, parallel_mut, parallelMut_edges, D_matrix, tp_alpha, tp_beta):
     selected_edges = {}
-    selected_edges_prob = {}
-    sorted_selected_edges = {}
     for pm in parallel_mut:
-        edge, edge_prob = selectEdgeParallel(Tree, pm, parallelMut_edges[pm], D_matrix, tp_alpha, tp_beta)
+        edge = selectEdgeParallel(Tree, pm, parallelMut_edges[pm], D_matrix, tp_alpha, tp_beta)
         selected_edges[pm] = edge
-        selected_edges_prob[pm] = edge_prob
-    # Rank the edges from highest to lowest prob for each mutation
-    selected_edges_prob = dict(sorted(selected_edges_prob.items(), key=lambda item: item[1], reverse=True))
-    # Sort the mutations based on highest prob and return the edges for each mutation.
-    for m in selected_edges_prob:
-        sorted_selected_edges[m] = selected_edges[m]
-    #print("Edges before sorting ",selected_edges)
-    #print("Edges prob sorted ",selected_edges_prob)
-    #print("Edges after sorting ",sorted_selected_edges)
-    return sorted_selected_edges
+    return selected_edges
 
 # Save the selected edges for each back mutation
 # Input is back mutations and their edges
-# Output is a dictionary with back mutation as key and list of edges as value, and sorted mutations with their prob of occurence to fix them later
+# Output is a dictionary with back mutation as key and list of edges as value
 def finalBackMutEdges(Tree, backMut_edges, D_matrix, tp_alpha, tp_beta, k):
     back_mut = list(backMut_edges.keys())
     selected_edges = {}
-    edge_ratio = {}
     for bm in back_mut:
         edges = selectBackMutEdges(Tree, bm, backMut_edges[bm], D_matrix, tp_alpha, tp_beta, k)
         selected_edges[bm] = edges
-        edge_ratio[bm] = calcBackMutEdgesProb(Tree, bm, backMut_edges[bm], D_matrix, tp_alpha, tp_beta)
-
-    # Now sort the mutations based on the prob of their edges
-    sorted_mut = {}
-    for bm, ep in edge_ratio.items():
-        prob_val = 0
-        for e, p in ep.items():
-            prob_val = prob_val + np.log(p)
-        sorted_mut[bm] = prob_val
-    sorted_mut = dict(sorted(sorted_mut.items(), key=lambda item: item[1], reverse=True))
-    return selected_edges, sorted_mut
+    return selected_edges
 
 ''' Place the selected parallel mutation on correct edges and update the Tree. '''
 # Input is Tree, parallel edges for each mutation, selected parallel edges, back mutation edges, allowed back mutation edges
@@ -310,7 +258,6 @@ def correctParallelMut(Tree, parallel_edges, mut_edges):
         if mut not in mut_edges:
             continue
         se = mut_edges[mut] # selected edge
-        print("Selected parallel mut edge ",se)
         for e in edges:
             if e == se:
                 continue
