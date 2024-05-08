@@ -4,11 +4,11 @@ from selectOptimalTree import cellTimepoints, readDMatrix, timepoint_missingRate
 
 ''' Return the Tree with the highest prob from all the BnpC runs. '''
 # Input: m = no. of Bnpc runs, t = no. of timepoints, cLoc = clustering results location
-def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, e, plotOp, sample):
+def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, fp, fn, plotOp, sample):
     Tree_prob = {}
     Tree_backMut = {}
-    for i in range(1,m+1):
-    #for i in range(3,4):
+    #for i in range(1,m+1):
+    for i in range(3,4):
         allClusters = cLoc+"/m"+str(i)+"/all/assignment.txt" # assignment.txt from BnpC run across all timepoints
         print("BnpC run ",i)
         tp_files = [] # save timepoint assignment.txt files
@@ -19,7 +19,7 @@ def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, e, plotOp, s
         print("Timepoint file ",tp_files)
         tp_alpha, tp_beta = readFPFNvalues(tp_errors)
         sorted_cluster_prob, tp_reassignedCells, tp_updatedCG = intialClusterResults(tp_files, allClusters, tpCells, D_matrix, tp_alpha, tp_beta, tp_MR)
-        Tree, back_mut, tree_prob = selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, sorted_cluster_prob, tp_reassignedCells, tp_updatedCG, tpCells, k, e, plotOp, str(i), sample)
+        Tree, back_mut, tree_prob = selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, sorted_cluster_prob, tp_reassignedCells, tp_updatedCG, tpCells, k, fp, fn, plotOp, str(i), sample)
         Tree_prob[tree_prob] = Tree
         Tree_backMut[tree_prob] = back_mut
     max_prob = max(Tree_prob)
@@ -27,7 +27,7 @@ def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, e, plotOp, s
     print("Max prob ",max_prob)
     finalTree = Tree_prob[max_prob]
     finalBackMut = Tree_backMut[max_prob]
-    plotTree(finalTree, {}, finalBackMut,"plots/"+plotOp+"/Final_maxProb.png", "Final Tree", sample)
+    plotTree(finalTree, {}, finalBackMut,"plots/"+plotOp+"/smallSA501.pdf", "", sample)
 
 parser = argparse.ArgumentParser()
 #parser.add_argument("-tp", "--tp",dest = "tp", help="Timepoint cells genotype.")
@@ -42,7 +42,8 @@ parser.add_argument("-cells","--cells", help="Cells assigned at each timepoint."
 #parser.add_argument("-f", "--f",dest="f", help="File having FP FN rates estimated from clusters")
 parser.add_argument("-D","--D", help="D matrix.")
 parser.add_argument("-k", "--k", help="No. of losses allowed")
-parser.add_argument("-e", "--e", help="FP FN error rate expected")
+parser.add_argument("-FP", "--FP", help="FP error rate expected", default=0.05)
+parser.add_argument("-FN", "--FN", help="FN error rate expected", default=0.35)
 parser.add_argument("-op", "--op", help="Path to save the resulting Tree.")
 parser.add_argument("-sample", "--sample", help="Sample name to plot the graphs.")
 args = parser.parse_args()
@@ -62,7 +63,7 @@ if os.path.exists("plots/"+args.op):
 else:
     os.makedirs("plots/"+args.op) # Make the dir to save the plots
 
-getTreeWithHighestProb(int(args.m), args.t, args.loc, tp_MR, tpCells, D_matrix, int(args.k), float(args.e), args.op, args.sample)
+getTreeWithHighestProb(int(args.m), args.t, args.loc, tp_MR, tpCells, D_matrix, int(args.k), float(args.FP), float(args.FN), args.op, args.sample)
 
 # -m 10 -t X1 X2 X4 -loc largeSA501_bnpc -cells SA501/largerData_1/SA501.cell_timepoints.csv -D SA501/largerData_1/SA501.input.D.csv -k 0 -e 0 -op largeSA501_multiBnpC -sample large 
 # Get the time point clusters folder and no. of runs as an input
