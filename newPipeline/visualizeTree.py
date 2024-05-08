@@ -15,7 +15,7 @@ def mutGenes(mutList, nodeMut):
 
 ''' Read the txt file to save small and large SA501 dict. '''
 def getMutDict():
-    filen = open('large_smallMut.txt','r')
+    filen = open('../large_smallMut.txt','r')
     fline = filen.readline().rstrip('\n')
     mutDict = {}
     while(fline != ''):
@@ -47,6 +47,15 @@ def gene_smallSA501(nodeMut):
         largeMut.append(gene_all[m])
     return largeMut
 
+def AML_mut(nodeMut):
+    #AML38 = {0: 'NPM1_p.L287fs', 1: 'IDH1_p.R132H', 2: 'IDH2_p.R140Q', 3: 'FLT3-ITD', 4: 'FLT3_p.D835H', 5: 'PTPN11_p.D61H', 6: 'PTPN11_p.A72G', 7: 'PTPN11_p.G503A', 8: 'KRAS_p.G12A', 9: 'KRAS_p.G12D', 10: 'NRAS_p.G13R', 11: 'NRAS_p.G12A'}
+    #AML99 = {0: 'RUNX1_p.R162K', 1: 'DNMT3A_p.R882H', 2: 'IDH2_p.R140Q', 3: 'CSF3R_p.Q768X', 4: 'SRSF2_p.P95L', 5: 'NRAS_p.G60E', 6: 'RUNX1_p.S318fs', 7: 'PTPN11_p.I282V', 8: 'FLT3-ITD', 9: 'IDH1_p.R132C', 10: 'CSF3R_p.Q776X'}
+    AML09 = {0: 'NPM1_p.L287fs', 1: 'FLT3-ITD', 2: 'FLT3_p.D835E', 3: 'FLT3_p.D835Y', 4: 'KRAS_p.G13D', 5: 'WT1_p.P372fs'}
+    mut = []
+    for m in nodeMut:
+        mut.append(AML09[m])
+    return mut
+
 def drawTree(tp_nodes, id_cells, id_newMut, id_plMut, id_backMut, id_edges, usc_nodes, name, sample):
     print("Inside visualize Tree ")
     print("Back mutation ",id_backMut)
@@ -59,7 +68,7 @@ def drawTree(tp_nodes, id_cells, id_newMut, id_plMut, id_backMut, id_edges, usc_
     graph = pydot.Dot("my_graph", graph_type='graph', rankdir='TB', label=name)
     gNodeIds = {} # Maintain a dict to with tree nodeId and corresponding Graph node ID
     #usc_nodes = [13, 14, 15]
-    colors_list = ['#ffcccc','#ffffb3','#e6ccff']
+    colors_list = ['#ffcccc','#ffffb3','#e6ccff','#e6ccff','#e6ccff']
     # First add the nodes in each timepoint
     for tp, nodes in tp_nodes.items():
         if tp == -1:
@@ -96,6 +105,8 @@ def drawTree(tp_nodes, id_cells, id_newMut, id_plMut, id_backMut, id_edges, usc_
         if pId == '0':
             p_gNode = "Root"
         else:
+            if pId not in gNodeIds:
+                continue
             p_gNode = gNodeIds[pId]
 
         gNode = gNodeIds[str(node)]
@@ -106,15 +117,22 @@ def drawTree(tp_nodes, id_cells, id_newMut, id_plMut, id_backMut, id_edges, usc_
             if sample == "gene":
                 lmutList = gene_smallSA501(id_newMut[node])
                 smutList = getMutList(lmutList)
+                mutations = ";".join(str(i) for i in id_newMut[node])
             if sample == "large":
                 smutList = getMutList(id_newMut[node])
+                mutations = ";".join(str(i) for i in id_newMut[node])
+            if sample == "AML":
+                amlMut = AML_mut(id_newMut[node])
+                mutations = ";".join(str(i) for i in amlMut)
+            else:
+                mutations = ";".join(str(i) for i in id_newMut[node])
 
             #mutGeneList = mutGenes(mutList, id_newMut[node])
             #mutGeneList = set(mutList) & set(id_newMut[node])
             #newMut = set(id_newMut[node]) - set(mutGeneList)
             #print("All mutations ",id_newMut[node])
             #print(mutGeneList," ",newMut)
-            mutations = ";".join(str(i) for i in id_newMut[node])
+            #mutations = ";".join(str(i) for i in id_newMut[node])
             #mutations = ";".join(str(i) for i in newMut)
             #if mutGeneList != []:
             #    mutGene = ";".join(str(i) for i in mutGeneList)

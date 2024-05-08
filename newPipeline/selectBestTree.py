@@ -7,8 +7,8 @@ from selectOptimalTree import cellTimepoints, readDMatrix, timepoint_missingRate
 def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, e, plotOp, sample):
     Tree_prob = {}
     Tree_backMut = {}
-    #for i in range(1,m+1):
-    for i in range(2,3):
+    for i in range(1,m+1):
+    #for i in range(3,4):
         allClusters = cLoc+"/m"+str(i)+"/all/assignment.txt" # assignment.txt from BnpC run across all timepoints
         print("BnpC run ",i)
         tp_files = [] # save timepoint assignment.txt files
@@ -27,7 +27,7 @@ def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, e, plotOp, s
     print("Max prob ",max_prob)
     finalTree = Tree_prob[max_prob]
     finalBackMut = Tree_backMut[max_prob]
-    #plotTree(finalTree, {}, finalBackMut,"plots/"+plotOp+"/Final_maxProb.png", "Final Tree", sample)
+    plotTree(finalTree, {}, finalBackMut,"plots/"+plotOp+"/Final_maxProb.png", "Final Tree", sample)
 
 parser = argparse.ArgumentParser()
 #parser.add_argument("-tp", "--tp",dest = "tp", help="Timepoint cells genotype.")

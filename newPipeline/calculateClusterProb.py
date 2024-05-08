@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+import math
 
 ''' Get the missing rate for each time point. '''
 # Input is cells in each time point and noisy D matrix
@@ -16,6 +17,8 @@ def timepoint_missingRate(tpCells, D_matrix):
                 if D_matrix[int(i)][j] == 3:
                     missingEntries = missingEntries + 1
         missingRate = missingEntries / (noOfCells * noOfMut)
+        if missingRate == 0:
+            missingRate = float(1e-6)
         tp_MR[tp] = missingRate
     print(" Timepoint missing rate ",tp_MR)
     return tp_MR
@@ -120,7 +123,12 @@ def calc_cluster_prob(cluster_cells, cluster_genotype, D_matrix, tp_alpha, tp_be
                 else:
                     P_CGk_Ck = P_CGkj_Cj / P_Dj
                 #print(j," mutation prob ",P_CGk_Ck)
-                sum_log_P_cgk_ck = sum_log_P_cgk_ck + np.log(P_CGkj_Cj)
+                if P_CGkj_Cj == 0:
+                    P_CGkj_Cj = float(1e-6)
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    sum_log_P_cgk_ck = sum_log_P_cgk_ck + np.log(P_CGkj_Cj)
+                    #if math.isinf(sum_log_P_cgk_ck):
+                    #    print("P_CGkj_Cj value ",P_CGkj_Cj)
                 #print(" Inside mutation prob ",sum_log_P_cgk_ck)
 
             #print(" Prob sum ",sum_log_P_cgk_ck)

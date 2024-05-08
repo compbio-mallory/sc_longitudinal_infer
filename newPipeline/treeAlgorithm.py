@@ -17,7 +17,7 @@ class Node:
 def printTree(Tree):
     print("=============== TREE =====================")
     for j in range(len(Tree)):
-        print(" ID ",Tree[j].id," PID ",Tree[j].pID," Timepoint ",Tree[j].timepoint," Mutations ",Tree[j].mutations," Type ",Tree[j].type," Edges ",Tree[j].edges," Children ",Tree[j].children," Cells ",Tree[j].cells)
+        print(" ID ",Tree[j].id," PID ",Tree[j].pID," Timepoint ",Tree[j].timepoint," Mutations ",Tree[j].mutations," Type ",Tree[j].type," Edges ",Tree[j].edges," Children ",Tree[j].children," Cells ",len(Tree[j].cells))
     print(" ====================================== ")
 
 ''' Given a genotype returns an array with indices of 1s. '''
@@ -39,6 +39,8 @@ def buildTree(tp_cluster_cells, tp_cluster_genotype):
     node = 1
     tp_nodes = {} # Can be used later to check consecutive nodes at each timepoint
     tp_nodes[-1] = [0] # Include root node
+    print(" Inside buildTree ============================== ")
+    #print("tp_cluster_cells ",tp_cluster_cells)
     for tp, clusters in tp_cluster_cells.items():
         for cluster, cell in clusters.items():
             Tree.append(Node(node))
@@ -54,7 +56,7 @@ def buildTree(tp_cluster_cells, tp_cluster_genotype):
             else:
                 tp_nodes[tp] = [node]
             node = node+1
-    
+    print(" TP nodes ",tp_nodes)
     return Tree, clone_node, tp_nodes
 
 ''' Connect the nodes across timepoints having the same genotype. '''
@@ -167,7 +169,7 @@ def recheckParentNode(Tree, node, t1_nodes, mut):
         if Tree[c].type == "unobserved" and c in t1_nodes:
             #print(" Unobserved subclone ",c)
             #print(Tree[c].mutations," ",mut)
-            if set(Tree[c].mutations).issubset(set(mut)):
+            if len(Tree[c].mutations) != len(mut) and set(Tree[c].mutations).issubset(set(mut)):
                 #print(" Unobserved subclone ",c)
                 return c
     return ""
@@ -177,8 +179,8 @@ and designated the unobserved node according to this order. The designated unobs
 maximum overlap with the unobserved node.'''
 ''' From the hash table select the unobserved subclone which has the largest number of child nodes.
 To connect with the parent we choose the node in time t that has largest intersection of mutations. '''
-# Input is the Tree, nodes in previous timepoint, hash_table
-def select_unobservedSubclones(Tree, nodes, sorted_hash_table, usc_timepoint, iterNo):
+# Input is the Tree, nodes in previous timepoint, hash_table, timepoint for unobserved subclone, iter No., children if list not from hash table
+def select_unobservedSubclones(Tree, nodes, sorted_hash_table, usc_timepoint, iterNo, children_list):
     noOfIntersections = 0
     parentNode = {} # used to save the parentNode. There can be only one parent.
     nodes_added = []
@@ -208,9 +210,10 @@ def select_unobservedSubclones(Tree, nodes, sorted_hash_table, usc_timepoint, it
             #print(" Mutation subset ",mutSubset," ",Tree[n].mutations," ",mut_list)
             if len(mutSubset) > noOfIntersections:
                 noOfIntersections = len(mutSubset)
-                print("Could have selected parent ",n)
+                print("Could have selected parent ",n," overlapped mutations ",noOfIntersections)
                 if iterNo > 1: # If unobserved subclone from other iterations have less mutations than existing one then don't enroll them
-                    if set(mut_list).issuperset(set(Tree[n].mutations)): # new unobserved subclone should also be a superset of its parent
+                    if len(mut_list) != len(Tree[n].mutations) and set(mut_list).issuperset(set(Tree[n].mutations)): # new unobserved subclone should also be a proper superset of its parent
+                        print("Selected parent ",n)
                         parentNode[0] = n # Update the node with maximum no. of intersections
                 else:
                     parentNode[0] = n # Update the node with maximum no. of intersections
@@ -220,6 +223,7 @@ def select_unobservedSubclones(Tree, nodes, sorted_hash_table, usc_timepoint, it
 
         newParent = recheckParentNode(Tree, parentNode[0], nodes, mut_list) # Recheck parent for multiple iterations of unobserved subclones
         if newParent != "":
+            print("New parent ",newParent)
             parentNode[0] = newParent
 
         nodes_added.extend(nodeList)
@@ -234,7 +238,7 @@ def select_unobservedSubclones(Tree, nodes, sorted_hash_table, usc_timepoint, it
         #    continue
 
         # Update the tree with parent ID and unobserved subclone and get the enrolled nodeId
-        newNodeId = enrollUnobservedSubclones(Tree, mut_list, parentNode[0], nodeList, usc_timepoint)
+        newNodeId = enrollUnobservedSubclones(Tree, mut_list, parentNode[0], nodeList, usc_timepoint, children_list)
         unobserved_subclones.append(newNodeId)
         print(" Unobserved subclone ",mut," children ",nodeList," parents ",parentNode[0]," ",Tree[parentNode[0]].children)
         print(" New node Id ",newNodeId)
@@ -261,7 +265,11 @@ Then check if this unobserved subclone will have only one child or not child and
 
 ''' Update the Tree to include the unobserved subclones. '''
 # Input is Tree, mutations of the unobserved subclone, parent IDs and children
-def enrollUnobservedSubclones(Tree, mut, pID, cIDs, usc_timepoint):
+def enrollUnobservedSubclones(Tree, mut, pID, cIDs, usc_timepoint, children_list):
+    if children_list != []:
+        print("Inside Enroll unobserved subclones ")
+        cIDs = children_list
+    print(cIDs)
     node = len(Tree)
     Tree.append(Node(node))
     Tree[node].id = node
@@ -271,8 +279,13 @@ def enrollUnobservedSubclones(Tree, mut, pID, cIDs, usc_timepoint):
     Tree[node].children = cIDs
     Tree[node].type = "unobserved"
     Tree[pID].children.append(node)
+    print("Unobserved subclone ",node," children ",cIDs)
     # If parent has the same set of children then remove them
     for c in cIDs:
+        if Tree[c].timepoint != usc_timepoint:
+            print("Timepoints different !!! ")
+            Tree[node].children.remove(c)
+            continue
         if c in Tree[pID].children:
             #print(" pID ",pID," c ",c)
             Tree[pID].children.remove(c)
@@ -280,6 +293,13 @@ def enrollUnobservedSubclones(Tree, mut, pID, cIDs, usc_timepoint):
     #    Tree[pID].children.append(node)
     # Connect the children to its parent
     for c in cIDs:
+        # Before connecting children to its parents check if there are existing parent
+        # Remove the children from those previous pIDs before enrolling new children
+        if Tree[c].pID != -1 and c in Tree[Tree[c].pID].children:
+            Tree[Tree[c].pID].children.remove(c)
+        if Tree[Tree[c].pID].children == []:
+            Tree[Tree[c].pID].pID = -2
+            Tree[Tree[c].pID].edges = ""
         Tree[c].pID = node
     return node
 
@@ -313,20 +333,43 @@ def checkHashTable(hash_table):
     else:
         return hash_table
 
+''' In the first layer check for another level higher of the unobserved subclones for more intersected mutations. '''
+# Input is Tree, Nodes in t=-1, Nodes in t=0, unobserved subclones before t=0
+# Updates list of unobserved subclones if any new node found
+def checkMoreUnobservedSubclone(Tree, prev_nodes, t0_node_list, usc_nodes_list):
+    # Contains unobserved subclones between t=-1 and t=0, and nodes in t=0
+    node_mut = {}
+    t0_node_list.extend(usc_nodes_list)
+    for n in t0_node_list:
+        node_mut[n] = Tree[n].mutations
+
+    hash_table = build_hash_table(node_mut) # Hash table should be from all nodes in t1
+    updated_hash_table = eliminate_usc_sets(Tree, t0_node_list, hash_table)
+
+    # Sort hash table to have the highest children as the first item
+    sorted_hash_table = dict(sorted(updated_hash_table.items(), key=lambda items:len(items[1]), reverse=True))
+    recheck_hash_table = checkHashTable(sorted_hash_table)
+    usc_nodes = select_unobservedSubclones(Tree, [0], recheck_hash_table, 0, 1, usc_nodes_list)
+    print("Unobserved subclones in t=0 after 1st iteration ",usc_nodes)
+    #usc_nodes_list.extend(usc_nodes)
+    #prev_nodes.extend(usc_nodes)
+    return usc_nodes
+
 ''' List unobserved subclones by building the Hash table. '''
 # Input is Tree, nodes (not unobserved) in each timepoint, already connected nodes with same set of mutations
 def find_unobservedSubclone(Tree, tp_nodes, connectedNodes):
     tp_usc_nodes = {} # Unobserved subclones in each time point
+    print(" Before finding unobserved subclones ",tp_nodes)
     for t1, n1 in tp_nodes.items():
         if t1+1 not in tp_nodes:
             continue
         # Update this list with unobserved nodes and t1 nodes
-        t1_nodes_list = n1
+        t1_nodes_list = copy.deepcopy(n1)
         print(" Timepoint ",str(t1))
         # Timepoint for unobserved subclones. This will only be used to check parallel mutations later.
         usc_timepoint = t1+1
 
-        t2_nodes = tp_nodes[t1+1]
+        t2_nodes = copy.deepcopy(tp_nodes[t1+1])
         node_mut = nodeMutations(Tree, t2_nodes, connectedNodes)
         hash_table = build_hash_table(node_mut) # hash table is from nodes in next timepoint
         iterNo = 1
@@ -344,18 +387,24 @@ def find_unobservedSubclone(Tree, tp_nodes, connectedNodes):
             recheck_hash_table = checkHashTable(sorted_hash_table)
             print(" After rechecking hash table ",recheck_hash_table)
             # Get the updated hash table for next iteration
-            usc_nodes = select_unobservedSubclones(Tree, t1_nodes_list, recheck_hash_table, usc_timepoint, iterNo)
+            usc_nodes = select_unobservedSubclones(Tree, t1_nodes_list, recheck_hash_table, usc_timepoint, iterNo, [])
             print("usc_nodes ",usc_nodes)
             if usc_nodes == []: # 2nd step where no more unobserved subclone is left
                 break
-            t1_nodes_list.extend(usc_nodes)
 
-            if t1 in tp_usc_nodes:
-                tp_usc_nodes[t1].extend(usc_nodes)
+            t1_nodes_list.extend(usc_nodes)
+            if iterNo == 1 and t1 == -1 and usc_nodes != []:
+                new_usc_nodes = checkMoreUnobservedSubclone(Tree, t1_nodes_list, t2_nodes, usc_nodes)
+                usc_nodes.extend(new_usc_nodes)
+                t1_nodes_list.extend(new_usc_nodes)
+
+            if t1+1 in tp_usc_nodes:
+                tp_usc_nodes[t1+1].extend(usc_nodes)
             else:
-                tp_usc_nodes[t1] = usc_nodes
+                tp_usc_nodes[t1+1] = usc_nodes
 
             iterNo = iterNo+1
+    print("Inside find_unobservedSubclone ",tp_nodes)
     return Tree, tp_usc_nodes
 
 ''' Look for node v such that the mutations of v that are not
@@ -366,6 +415,8 @@ def select_nodeV_withLeastMutationLoss(Tree, t1_nodes, mut):
     v_mut_diff = {}
     print(mut)
     for n in t1_nodes:
+        if Tree[n].pID == -2:
+            continue
         #print(n," ",Tree[n].mutations)
         diff_mut = set(Tree[n].mutations) - set(mut)
         #diff_mut = set(mut) - set(Tree[n].mutations)
@@ -382,6 +433,8 @@ def select_nodeV_withLeastMutationLoss(Tree, t1_nodes, mut):
 def selectNode_maxCommonMutation(Tree, t1_nodes, mut):
     node_mut = {}
     for n in t1_nodes:
+        if Tree[n].pID == -2:
+            continue
         if set(Tree[n].mutations).issubset(set(mut)):
             node_mut[n] = len(set(Tree[n].mutations) & set(mut))
 
@@ -399,19 +452,25 @@ the identified unobserved nodes in between time $k$ and $k+1$ such that the resu
 # Input is Tree, nodes in each timepoint, unobserved subclones between timepoints
 def connect_remainingNodes(Tree, tp_nodes, tp_usc_nodes):
     for i in range(1,len(Tree)):
+        if i == 7:
+            print(" For Node 7 ")
         #if Tree[i].type == "unobserved":
         #    continue
         # check for nodes that are not connected
         if Tree[i].pID == -1: 
-            prev_tp_nodes = tp_nodes[Tree[i].timepoint-1] 
+            # Check only nodes in previous timepoint and not their unobserved subclones
+            print(" tp_usc_nodes ",tp_usc_nodes," tp_nodes ",tp_nodes)
+            prev_tp_nodes = tp_nodes[Tree[i].timepoint-1]
+            print(" List of prev_tp_nodes ",prev_tp_nodes)
             # First check for subset of mutations
             parentNode = selectNode_maxCommonMutation(Tree, prev_tp_nodes, Tree[i].mutations)
             if parentNode != -1:
                 Tree[i].pID = parentNode
                 Tree[Tree[i].pID].children.append(i)
             else: # Check 2nd condition
-                if Tree[i].timepoint-1 in tp_usc_nodes: # Add unobserved subclones to check
-                    prev_tp_nodes.extend(tp_usc_nodes[Tree[i].timepoint-1])
+                # Unobserved nodes in this timepoint has the same timepoint
+                if Tree[i].timepoint in tp_usc_nodes: # Add unobserved subclones to check
+                    prev_tp_nodes.extend(tp_usc_nodes[Tree[i].timepoint])
 
                 print(" List of prev tp nodes ",prev_tp_nodes)
                 print(" Selecting node v for node ",i)

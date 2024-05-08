@@ -85,19 +85,20 @@ def getNewClusters(tp_clustersF, all_clustersF, tpCells):
         sys.exit("Your input number of timepoint clusters doesn't match the number of timepoints.")
     #timepoints = [i for i in range(len(tp_clustersF))]
     for i in range(len(tp_clustersF)):
-        #cellsStart = int(tpCells[i][0])
-        #cellsEnd = int(tpCells[i][len(tpCells[i])-1])
-        #print(" Cells start ",cellsStart," end ",cellsEnd)
-        #tp_cluster = get_tp_cell_cluster(tp_clustersF[i], cellsStart)
         tp_cluster = get_tp_cell_cluster(tp_clustersF[i], tpCells[i])
         grouped_clusters = groupClusters(tp_cluster)
-        #allClusters_tp = assignment_onTimepoints(all_clusters, cellsStart, cellsEnd)
-        allClusters_tp = assignment_onTimepoints(all_clusters, tpCells[i])
-        grouped_allClusters_tp = groupClusters(allClusters_tp)
-        new_clusters = checkClusterMembership(grouped_clusters, grouped_allClusters_tp)
-        new_tp_clusters[i] = listToDict(new_clusters)
+
+        #allClusters_tp = assignment_onTimepoints(all_clusters, tpCells[i])
+        #grouped_allClusters_tp = groupClusters(allClusters_tp)
+        #new_clusters = checkClusterMembership(grouped_clusters, grouped_allClusters_tp)
+        #new_tp_clusters[i] = listToDict(new_clusters)
+        new_tp_clusters[i] = listToDict(grouped_clusters)
 
     print(" New clusters ",new_tp_clusters)
+    #for tp, clus in new_tp_clusters.items():
+    #    print("Timepoint ",tp)
+    #    for c, cc in clus.items():
+    #        print("Cluster ",c," cells ",len(cc))
     return new_tp_clusters
 
 #[[C0-C3], [C4-C7], [C8-C10]] M2: [[C0-C1], [C2-C3], [C4-C7], [C8-C10]]
@@ -164,8 +165,8 @@ def calcMaxLikelihood(cells, D_matrix, alpha, beta):
                 count1 = count1+1
                 #if j == 7 or j == 8 or j == 10:
                 #    print("Inside D=1  C_k0 ",C_k0," C_k1 ",C_k1)
-        if j == 7 or j == 11 or j == 12:
-            print(" C_k0 ",C_k0/len(cells)," C_k1 ",C_k1/len(cells))
+        if j == 7 or j == 11 or j == 12 or j == 17:
+            print(" C_k0 ",C_k0," C_k1 ",C_k1)
         # If there is a tie in no. of 0s and 1s and 3s then it is an unknown
         if count0 == count1 or count3 == len(cells):
             cluster_genotype.append(3) # we input 3 for unknowns as well
@@ -195,12 +196,13 @@ def updateTpClusterGen(D_matrix, tp_clusters, tp_alpha, tp_beta):
                 print("Cell ",c," ",D_matrix[c])
 
             if len(cells) == 1:
-                cluster_gen[cluster] = D_matrix[c]
+                cluster_gen[cluster] = D_matrix[cells[0]]
                 print(cluster_gen[cluster])
             else:
                 cluster_gen[cluster] = calcMaxLikelihood(cells, D_matrix, alpha, beta)
                 print(cluster_gen[cluster])
 
+        #print("Timepoint ",tp," Cluster ",cluster," gen ",cluster_gen)
         tp_cluster_gen[tp] = cluster_gen
     return tp_cluster_gen
 
@@ -236,10 +238,12 @@ def updateGenotype(gen1,gen2):
   for i in range(len(gen1)):
     if gen1[i] == gen2[i]:
       finalGen.append(gen1[i])
-    if gen1[i] == 3 and gen2[i] != 3:
+    elif gen1[i] == 3 and gen2[i] != 3:
       finalGen.append(gen2[i])
-    if gen2[i] == 3 and gen1[i] != 3:
+    elif gen2[i] == 3 and gen1[i] != 3:
       finalGen.append(gen1[i])
+    else:
+      finalGen.append(0)
   return finalGen
 
 # Input is dictionary of merged clusters, their updated genotypes and all clusters in a timepoint
@@ -277,7 +281,7 @@ def checkClusterGenotype(tp_clustersGen):
             mergedCluster[c1] = clusterList
 
         updatedCG = allClusters_updateCG(mergedCluster, updatedCG, clustersGen)
-        print("Timepoint ",tp,"Merged clusters ",mergedCluster)
+        #print("Timepoint ",tp,"Merged clusters ",mergedCluster)
         print("Timepoint ",tp,"Updated cluster genotype ",updatedCG)
         tp_mergedClusters[tp] = mergedCluster
         tp_updatedCG[tp] = updatedCG
@@ -296,7 +300,7 @@ def reassignCells(tp_mergedClusters, tp_cluster_cells):
             cells = tp_cluster_cells[tp][c1]
             for c in c2:
                 cells.extend(tp_cluster_cells[tp][c])
-            cluster_cells[c1] = cells
+            cluster_cells[c1] = list(set(cells))
 
         tp_reassignedCells[tp] = cluster_cells
     print(" After reassigning cells for timepoint clusters ",tp_reassignedCells)

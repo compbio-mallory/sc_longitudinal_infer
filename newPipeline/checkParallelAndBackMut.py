@@ -43,6 +43,8 @@ def getParallelMut(Tree):
             parallel_mut.append(mut)
             edges = []
             for n in nodes:
+                if Tree[n].edges == '':
+                    continue
                 edges.append(Tree[n].edges)
             parallelMut_edges[mut] = edges
         
@@ -90,11 +92,12 @@ def getBackMutCount(Tree):
 ''' Get the subtree given the child node as the root. '''
 def nodeChildren(Tree, node, nodes_list):
     for j in range(len(Tree)):
-        if Tree[j].id == node:
+        nodeId = Tree[j].id
+        if nodeId == node:
             #print(" ID ",Tree[j].id," Children ",Tree[j].children)
             temp_list = []
-            temp_list.extend(Tree[j].children)
-            nodes_list.extend(Tree[j].children)
+            temp_list.extend(Tree[nodeId].children)
+            nodes_list.extend(Tree[nodeId].children)
             #print(" Nodes list here ",nodes_list)
             if temp_list != []:
                 for c in temp_list:
@@ -140,6 +143,7 @@ def subtree(Tree, root, x):
 ''' Select the best edge to place the parallel mutation. '''
 def selectEdgeParallel(Tree, x, A_x, D_matrix, timepoint_FP, timepoint_FN):
     edge_ratios = {} # output dictionary with edge as key and ratio as values 
+    #print("Inside finding parallel mutations ")
     for e in A_x:
         child_node = int(e.split('_')[1])
         subtree_nodes = subtree(Tree, child_node, x)
@@ -151,18 +155,21 @@ def selectEdgeParallel(Tree, x, A_x, D_matrix, timepoint_FP, timepoint_FN):
         #print(" Timepoint ",child_node_tp)
         R_e = calculateRatio(node_cells, x, timepoint_FP[child_node_tp], timepoint_FN[child_node_tp], D_matrix, "parallel")
         for n in subtree_nodes:
+            if Tree[n].type == "unobserved": # skip calculating for the unobserved subclones as they have 0 cells.
+                continue
             n_cells = Tree[n].cells
             n_tp = Tree[n].timepoint
+            #print("Child node ",n," cells",len(n_cells))
             #n_tp = int(getNodeTimepoint(Tree, n))
             #print(" Timepoint ",n_tp)
             R_n = calculateRatio(n_cells, x, timepoint_FP[n_tp], timepoint_FN[n_tp], D_matrix, "parallel")
-            R_e = R_e * R_n
+            R_e = R_e + R_n
 
         #print(" Ratio ",R_e)
         edge_ratios[e] = R_e
     #Select the edge with maximum R_e.
-    #print(" Edge ratio ",edge_ratios)
-    #print(" Maximum ratio edge ",max(edge_ratios, key=edge_ratios.get))
+    print("Parallel mutation edge ratio ",edge_ratios)
+    print(" Maximum ratio edge ",max(edge_ratios, key=edge_ratios.get))
     return max(edge_ratios, key=edge_ratios.get)
 
 # Input is tree, back mutation x, edges of the back mutation x B_x, noisy D matrix, consensus genotype G, \alpha and \beta for timepoints, k = no. of back mutation edges
@@ -184,12 +191,14 @@ def selectBackMutEdges(Tree, x, B_x, D_matrix, timepoint_FP, timepoint_FN, k):
         #print(" Timepoint ",child_node_tp)
         R_e = calculateRatio(node_cells, x, timepoint_FP[child_node_tp], timepoint_FN[child_node_tp], D_matrix, "back")
         for n in subtree_nodes:
+            if Tree[n].type == "unobserved": # skip calculating for the unobserved subclones as they have 0 cells.
+                continue
             n_cells = Tree[n].cells
             n_tp = Tree[n].timepoint
             #n_tp = int(getNodeTimepoint(Tree, n))
             #print(" Timepoint ",n_tp)
             R_n = calculateRatio(n_cells, x, timepoint_FP[n_tp], timepoint_FN[n_tp], D_matrix, "back")
-            R_e = R_e * R_n
+            R_e = R_e + R_n
 
         #print(" Ratio ",R_e)
         edge_ratios[e] = R_e
@@ -197,14 +206,15 @@ def selectBackMutEdges(Tree, x, B_x, D_matrix, timepoint_FP, timepoint_FN, k):
     # Select top k Edges. First sort the dictionary by their ratio in decreasing order and choose top k
     sorted_edge_ratios = dict(sorted(edge_ratios.items(), key=lambda item:item[1], reverse=True))
     kEdges = list(sorted_edge_ratios.keys())[:k]
-    print(" sorted_edge_ratios ",sorted_edge_ratios)
+    print("Back mutation sorted_edge_ratios ",sorted_edge_ratios)
     print(" k edges ",kEdges)
     return kEdges
 
 # Input is cells in a node, parallel mutation x, \alpha and \beta of their respective timepoints, noisy D_matrix, mutation type
 # Output is the ratio R_e for all cells in the node.
 def calculateRatio(cells, x, alpha, beta, D_matrix, type_):
-    R_cells = 1
+    R_cells = 0
+    #print("FP rate ",alpha,"FN rate ",beta)
     for c in cells:
         #print(" Cell ",c," Mutation ",x)
         D_ix = D_matrix[int(c)][int(x)]
@@ -219,16 +229,20 @@ def calculateRatio(cells, x, alpha, beta, D_matrix, type_):
 
         #print(P_Dix_Gx_1 / P_Dix_Gx_0)
         if type_ == "parallel":
-            if P_Dix_Gx_0 == 0:
-                R_cells = 0
+            if (P_Dix_Gx_1 / P_Dix_Gx_0) == 0:
+                R_cells = R_cells + np.log(float(1e-6))
             else:
-                R_cells = R_cells * (P_Dix_Gx_1 / P_Dix_Gx_0)
+                R_cells = R_cells + np.log(P_Dix_Gx_1 / P_Dix_Gx_0)
         else:
-            if P_Dix_Gx_1 == 0:
-                R_cells = 0
+            if (P_Dix_Gx_0 / P_Dix_Gx_1) == 0:
+                R_cells = R_cells + np.log(float(1e-6))
             else:
-                R_cells = R_cells * (P_Dix_Gx_0 / P_Dix_Gx_1)
-    return R_cells
+                R_cells = R_cells + np.log(P_Dix_Gx_0 / P_Dix_Gx_1)
+    #print("R_cells ",R_cells)
+    if R_cells == 0:
+        return float(1e-6)
+    else:
+        return R_cells
 
 # Save the selected edges for each parallel mutation
 # Input is parallel mutations and their edges
