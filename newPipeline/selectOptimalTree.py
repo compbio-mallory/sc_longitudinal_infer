@@ -82,6 +82,16 @@ def getTree(tp_cluster_cells, tp_cluster_genotype):
     printTree(Tree)
     return Tree, clone_node
 
+''' Save the Tree in a .csv file. '''
+def saveTree(Tree, out_f):
+    f = open(out_f, "w")
+    f.write("\t".join(['ID','PID','Timepoint','Type','Mutations','Edges','Children','Cells'])+ "\n")
+    for i in range(len(Tree)):
+        #print(",".join(map(str,G[i].parentID)))
+        #print(" ID ",Tree[j].id," PID ",Tree[j].pID," Timepoint ",Tree[j].timepoint," Mutations ",Tree[j].mutations," Type ",Tree[j].type," Edges ",Tree[j].edges," Children ",Tree[j].children," Cells ",len(Tree[j].cells))
+        f.write("\t".join([str(Tree[i].id), str(Tree[i].pID), str(Tree[i].timepoint), str(Tree[i].type), ",".join(map(str,Tree[i].mutations)), str(Tree[i].edges), ",".join(map(str,Tree[i].children)), ",".join(map(str,Tree[i].cells))]) + "\n")
+    f.close()
+
 ''' Get details from the Tree and generate plots. '''
 def plotTree(Tree, plMut_edges, backMut_edges, opFile, name, sample):
     tp_nodes = {}
@@ -366,7 +376,7 @@ def check_FPFN(tp_FP, tp_FN, tp, userFP, userFN):
     #else:
     FP = tp_FP[tp]
     FN = tp_FN[tp]
-    if FP >= userFP or FN >= userFN:
+    if FP > userFP or FN > userFN:
         result = True
     return result
 
@@ -479,7 +489,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
     refresh_index = 0
     print("Initial Tree ===============================")
     printTree(finalTree)
-    plotTree(Tree, {}, final_backMut_edges, "plots/"+plotOp+"/initialTree.pdf", "Initial Tree", sample)
+    #plotTree(Tree, {}, final_backMut_edges, "plots/"+plotOp+"/initialTree.pdf", "Initial Tree", sample)
     print("Spurious subclones ",tp_cluster_prob) # Think of a way to map the subclones to nodes
     getNodeProb(tp_cluster_prob, clone_node)
     for tp_cluster in tp_cluster_prob:
@@ -547,7 +557,8 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                 print(" Before correction iteration ",noOfiter," Clone node ",clone_node)
                 
                 new_backMut_edges = getBackMutCount(Tree)
-                plotTree(Tree, {}, new_backMut_edges,"plots/"+plotOp+"/iter"+str(noOfiter)+"_bc.pdf", "Iter "+str(noOfiter)+" before correction", sample)
+                #plotTree(Tree, {}, new_backMut_edges,"plots/"+plotOp+"/iter"+str(noOfiter)+"_bc.pdf", "Iter "+str(noOfiter)+" before correction", sample)
+                
                 # Fix the parallel and back mutation. After correction the tp_cluster_genotype will change.
                 #Tree, tp_cluster_genotype, new_tp_FP, new_tp_FN = correctParallelAndBackMut(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, old_tp_FP, old_tp_FN, Tree, clone_node, k, plotOp, noOfiter, sample)
 
@@ -596,7 +607,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                     #refresh_tp_cluster_prob = getSpuriousSubclones(upper_bound, new_tp_cluster_prob)
                     #print("Back mutations ",final_backMut_edges)
                     # plot the final tree. Last one gets overwritten
-                    plotTree(finalTree, {}, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_bc.pdf", "Final Tree",sample)
+                    #plotTree(finalTree, {}, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_bc.pdf", "Final Tree",sample)
                     #eliminated_clusters.append(tp_cluster)
                     break
                 else:
@@ -653,7 +664,8 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
             print(" Before correction iteration ",noOfiter," Clone node ",clone_node)
         
             new_backMut_edges = getBackMutCount(Tree)
-            plotTree(Tree, {}, new_backMut_edges,"plots/"+plotOp+"/iter"+str(noOfiter)+"_bc.pdf", "Iter "+str(noOfiter)+" before correction", sample)
+            #plotTree(Tree, {}, new_backMut_edges,"plots/"+plotOp+"/iter"+str(noOfiter)+"_bc.pdf", "Iter "+str(noOfiter)+" before correction", sample)
+            
             # Fix the parallel and back mutation. After correction the tp_cluster_genotype will change. 
             #Tree, tp_cluster_genotype, new_tp_FP, new_tp_FN = correctParallelAndBackMut(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, old_tp_FP, old_tp_FN, Tree, clone_node, k, plotOp, noOfiter, sample)
 
@@ -700,7 +712,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                 #print("Refresh tp cluster prob after final iteration ",refresh_tp_cluster_prob)
                 #print("Back mutations ",final_backMut_edges)
                 # plot the final tree. Last one gets overwritten
-                plotTree(finalTree, {}, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_bc.pdf", "Final Tree",sample)
+                #plotTree(finalTree, {}, final_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_bc.pdf", "Final Tree",sample)
                 #eliminated_clusters.append(tp_cluster)
             else:
                 print("=========== TREE NOT SELECTED =============")
@@ -712,11 +724,11 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
     finalTree = recheckFinalTree(finalTree) # In this method try to fix the parallel and back mutations
     #finalTree, cg = correctParallelAndBackMut(D_matrix, finalClusterCells, finalClusterGen, tp_alpha, tp_beta, finalTree, finalCloneNode, k, plotOp, noOfiter, sample)
     finalTree, cg = correctParallelAndBackMut(D_matrix, finalClusterCells, finalClusterGen, final_tp_FP, final_tp_FN, finalTree, finalCloneNode, k, plotOp, noOfiter, sample)
-    plotTree(finalTree, {}, {},"plots/"+plotOp+"/"+bnpcRun+"_Final_pbm.pdf", "Final Tree ", sample)
+    #plotTree(finalTree, {}, {},"plots/"+plotOp+"/"+bnpcRun+"_Final_pbm.pdf", "Final Tree ", sample)
     finalTree = recheckFinalTree(finalTree)
     printTree(finalTree)
     plot_backMut_edges = getBackMutCount(finalTree)
-    plotTree(finalTree, {}, plot_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_ac.pdf", " ", sample)
+    #plotTree(finalTree, {}, plot_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_ac.pdf", " ", sample)
     print("Final tree prob ",tree_prob)
     return finalTree, plot_backMut_edges, tree_prob
 
