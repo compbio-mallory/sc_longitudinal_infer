@@ -363,9 +363,9 @@ def diffFPFN(old_tp_FP, old_tp_FN, new_tp_FP, new_tp_FN):
     return tp_diffFP, tp_diffFN
 
 ''' Check diff between FP FN rates. If it is too high then we don't drop this spurious subclone. '''
-# Input is FP FN in each timepoint, timepoint, FP FN rates provided by user
+# Input is FP FN in each timepoint, timepoint, FP FN rate thresholds for each timepoint
 # If error rates are higher than given threshold then return True to indicate that diff is high and change is not allowed.
-def check_FPFN(tp_FP, tp_FN, tp, userFP, userFN):
+def check_FPFN(tp_FP, tp_FN, tp, FPrates, FNrates):
     result = False
     #if tp == "all": # check for diff for all timepoints 
     #    for tp in tp_diffFP:
@@ -376,7 +376,9 @@ def check_FPFN(tp_FP, tp_FN, tp, userFP, userFN):
     #else:
     FP = tp_FP[tp]
     FN = tp_FN[tp]
-    if FP > userFP or FN > userFN:
+    print("Timepoint FP ",tp_FP," FN ",tp_FN)
+    print("FPrates ",FPrates,"FN rates ",FNrates)
+    if FP > FPrates[tp] or FN > FNrates[tp]:
         result = True
     return result
 
@@ -451,7 +453,7 @@ def getNodeProb(spurious_subclone, cluster_nodes):
 
 ''' Select the tree with the highest probability. '''
 # Input is D_matrix, alpha and beta in each timepoint, cluster probabilities in each timepoint, cells in each cluster, cluster genotypes
-def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cluster_cells, tp_cluster_genotype, tpCells, k, userFPrate, userFNrate, plotOp, bnpcRun, sample):
+def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cluster_cells, tp_cluster_genotype, tpCells, k, tp_FPrate, tp_FNrate, plotOp, bnpcRun, sample):
     Tree, clone_node = getTree(tp_cluster_cells, tp_cluster_genotype)
     #print(" Clone node ",clone_node)
     tree_prob = calculate_treeProb(tp_cluster_prob) 
@@ -545,7 +547,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
 
                 new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
                 print(" New FP FN rates ",new_tp_FP," ",new_tp_FN)
-                if check_FPFN(new_tp_FP, new_tp_FN, tp, userFPrate, userFNrate):
+                if check_FPFN(new_tp_FP, new_tp_FN, tp, tp_FPrate, tp_FNrate):
                     print("Cluster not dropped ",cluster," in timepoint ",tp)
                     tp_cluster_genotype = prev_tp_cluster_genotype
                     tp_cluster_cells = prev_tp_cluster_cells
@@ -651,7 +653,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
             new_tp_FP, new_tp_FN = timepointFPFN(D_matrix, tp_cluster_cells, tp_cluster_genotype)
             print(" Iteration ",noOfiter," new FP ",new_tp_FP," new FN ",new_tp_FN)
 
-            if check_FPFN(new_tp_FP, new_tp_FN, tp, userFPrate, userFNrate):
+            if check_FPFN(new_tp_FP, new_tp_FN, tp, tp_FPrate, tp_FNrate):
                 print("Cluster not dropped ",cluster," in timepoint ",tp)
                 tp_cluster_genotype = prev_tp_cluster_genotype
                 tp_cluster_cells = prev_tp_cluster_cells
