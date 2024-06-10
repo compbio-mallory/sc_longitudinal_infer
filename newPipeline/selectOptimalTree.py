@@ -302,10 +302,61 @@ def recheckTree(Tree):
                 #nodesToRemove.add(i)
     return Tree
 
+''' Given a tree check the unobserved subclones in same timepoint. If there can be a parental relationship between them then do that. '''
+def checkUnobservedSubclones(Tree):
+    # First get the unobserved subclones in each timepoint
+    tp_usc = {}
+    for i in range(len(Tree)):
+        nodeId = Tree[i].id
+        # Don't check for already removed clones or observed subclones
+        if Tree[nodeId].pID == -2 or Tree[nodeId].type != "unobserved":
+            continue
+        tp = Tree[nodeId].timepoint
+        if tp in tp_usc:
+            tp_usc[tp].append(nodeId)
+        else:
+            tp_usc[tp] = [nodeId]
+
+    # Note the parent child relationships.
+    parent_child = {}
+    for t, nodes in tp_usc.items():
+        for n1 in nodes:
+            n1_mut = Tree[n1].mutations
+            for n2 in nodes:
+                if n1 == n2:
+                    continue
+                n2_mut = Tree[n2].mutations
+                # If parent is subset then connect them
+                if set(n2_mut).issubset(set(n1_mut)):
+                    if n2 in parent_child:
+                        parent_child[n2].append(n1)
+                    else:
+                        parent_child[n2] = [n1]
+    print("Connect unobserved subclones ",parent_child)
+
+    # Before connecting the unobserved subclones first check if they are already connected
+    for p, cIDs in parent_child.items():
+        for c in cIDs:
+            # If already connected to same parent or to another unobserved subclone (both parent or child) then skip
+            c_child = Tree[c].children
+            skip = False
+            for cc in c_child:
+                if Tree[cc].type == "unobserved":
+                    skip = True
+            if skip or Tree[Tree[c].pID].type == "unobserved" or Tree[c].pID == p:
+                print("Skipped node ",c)
+                continue
+
+            Tree[c].pID = p
+            Tree[c].edges = str(p)+"_"+str(c)
+            Tree[p].children.append(c)
+    return Tree
+
 ''' Recheck final tree before plotting. '''
 def recheckFinalTree(Tree):
     # Merge clones having similar set of mutations.
     # Then check for unobserved subclones.
+    Tree = checkUnobservedSubclones(Tree)
     Tree = mergeClones(Tree)
     Tree = recheckTree(Tree)
     print("Tree after merging and rechecking ===================")
@@ -491,7 +542,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
     refresh_index = 0
     print("Initial Tree ===============================")
     printTree(finalTree)
-    #plotTree(Tree, {}, final_backMut_edges, "plots/"+plotOp+"/initialTree.pdf", "Initial Tree", sample)
+    plotTree(finalTree, {}, {}, "plots/initialTree.pdf", "Initial Tree", sample)
     print("Spurious subclones ",tp_cluster_prob) # Think of a way to map the subclones to nodes
     getNodeProb(tp_cluster_prob, clone_node)
     for tp_cluster in tp_cluster_prob:
@@ -722,6 +773,8 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                 continue
     # the saved Tree will be the one with highest prob
     print(" ================= FINAL TREE =================== ")
+    printTree(finalTree)
+    plotTree(finalTree, {}, {},"plots/dummy.pdf", "Final Tree ", sample)
     # Fix the parallel and back mutation. After correction the tp_cluster_genotype will change.
     finalTree = recheckFinalTree(finalTree) # In this method try to fix the parallel and back mutations
     #finalTree, cg = correctParallelAndBackMut(D_matrix, finalClusterCells, finalClusterGen, tp_alpha, tp_beta, finalTree, finalCloneNode, k, plotOp, noOfiter, sample)

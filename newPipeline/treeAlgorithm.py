@@ -188,7 +188,7 @@ def select_unobservedSubclones(Tree, nodes, sorted_hash_table, usc_timepoint, it
 
     for mut, nodeList in sorted_hash_table.items(): # sorted hash table is a tuple here
         # re-check if this unobserved subclone should be eliminated before proceeding.
-        print("Nodes added ",nodes_added," nodes list ",nodeList)
+        print("Nodes added ",nodes_added," nodes list ",nodeList," unobserved_subclones ",unobserved_subclones," mut ",mut)
         if nodes_added != []:
             updatedNodes = filterUnobservedSubclones(nodes_added, nodeList)
             print(" Updated nodes ",updatedNodes)
@@ -339,6 +339,8 @@ def checkHashTable(hash_table):
 # Input is Tree, Nodes in t=-1, Nodes in t=0, unobserved subclones before t=0
 # Updates list of unobserved subclones if any new node found
 def checkMoreUnobservedSubclone(Tree, prev_nodes, t0_node_list, usc_nodes_list):
+    print("================ Inside checkMoreUnobservedSubclone ==================")
+    print("Existing usc nodes ",usc_nodes_list)
     # Contains unobserved subclones between t=-1 and t=0, and nodes in t=0
     node_mut = {}
     t0_node_list.extend(usc_nodes_list)
@@ -351,7 +353,9 @@ def checkMoreUnobservedSubclone(Tree, prev_nodes, t0_node_list, usc_nodes_list):
     # Sort hash table to have the highest children as the first item
     sorted_hash_table = dict(sorted(updated_hash_table.items(), key=lambda items:len(items[1]), reverse=True))
     recheck_hash_table = checkHashTable(sorted_hash_table)
-    usc_nodes = select_unobservedSubclones(Tree, [0], recheck_hash_table, 0, 1)
+    parent_nodes = [0]
+    #parent_nodes.extend(usc_nodes_list)
+    usc_nodes = select_unobservedSubclones(Tree, parent_nodes, recheck_hash_table, 0, 1)
     print("Unobserved subclones in t=0 after 1st iteration ",usc_nodes)
     #usc_nodes_list.extend(usc_nodes)
     #prev_nodes.extend(usc_nodes)
