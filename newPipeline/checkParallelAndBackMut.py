@@ -24,7 +24,7 @@ def getParallelMut(Tree):
         if j == 0: # Skip root node
             continue
         nodeId = Tree[j].id
-        p = int(Tree[j].pID)
+        p = int(Tree[nodeId].pID)
         new_mut = set(Tree[nodeId].mutations) - set(Tree[p].mutations) 
         #print(nodeId," New mutations ",new_mut)
         for mut in new_mut:
@@ -38,6 +38,7 @@ def getParallelMut(Tree):
 
     parallel_mut = []
     parallelMut_edges = {}
+    print("Mutation nodes ",mutation_node)
     for mut, nodes in mutation_node.items():
         if len(nodes) > 1:
             parallel_mut.append(mut)
@@ -47,7 +48,48 @@ def getParallelMut(Tree):
                     continue
                 edges.append(Tree[n].edges)
             parallelMut_edges[mut] = edges
-        
+    
+    # For each parallel mutation edges check if it is part of a subtree with unobserved subclone just losing that mutation. If yes then remove those edges.
+    #for pm, edges in parallelMut_edges.items():
+    #    remove_edges = set()
+    #    for e in edges:
+            # start from nodes that are not unobserved node in t=0 or root node.
+    #        if int(e.split('_')[0]) == 0 or Tree[int(e.split('_')[0])].type == "unobserved":
+    #            rootNode = int(e.split('_')[1])
+    #        else:
+    #            rootNode = int(e.split('_')[0])
+    #        if Tree[rootNode].type == "unobserved":
+    #            continue
+    #        subtreeNodes = subtree(Tree, rootNode, pm)
+    #        print(" Mutation ",pm," ",e," Subtree nodes ",subtreeNodes)
+    #        for e1 in edges:
+    #            if e == e1:
+    #                continue
+    #            parentNode = int(e1.split('_')[0])
+    #            childNode = int(e1.split('_')[1])
+                # Check if parent or child node appears in subtree and remove that edge.
+    #            if parentNode in subtreeNodes or childNode in subtreeNodes:
+    #                remove_edges.add(e1)
+    #                continue
+    #    print("Remove edges ",remove_edges)
+    #    parallelMut_edges[pm] = list(set(edges) - remove_edges)
+
+    for pm, edges in parallelMut_edges.items():
+        remove_edges = set()
+        for e in edges:
+            # check immediate nodes for parallel mutation check.
+            cNode = int(e.split('_')[1])
+            for e1 in edges:
+                if e == e1:
+                    continue
+                parentNode = int(e1.split('_')[0])
+                # Check if any edge is already connected immediately.
+                if Tree[parentNode].pID == cNode:
+                    remove_edges.add(e1)
+                    continue
+        print("Remove edges ",remove_edges)
+        parallelMut_edges[pm] = list(set(edges) - remove_edges)
+
     print(" Parallel mutations ",parallel_mut," edges ",parallelMut_edges)
     return parallel_mut, parallelMut_edges
 

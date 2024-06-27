@@ -1,5 +1,8 @@
 import argparse
 import os
+import json
+import copy
+import pandas as pd
 from selectOptimalTree import cellTimepoints, readDMatrix, timepoint_missingRate, readFPFNvalues, intialClusterResults, selectOptimalTree, plotTree, saveTree
 
 # Calculate the threshold of each timepoint given the FP and FN for each timepoint from the BnpC runs
@@ -42,6 +45,23 @@ def getFPFN_threshold(m, t, cLoc):
     print(tp_FP," ",tp_FN)
     return tp_FP, tp_FN
 
+''' Save dictionary to JSON file. '''
+def saveDictFile(fileObj, fileOp):
+    with open(fileOp,'w') as f:
+        f.write(json.dumps(fileObj))
+
+''' Get BnpC's genotype by combining all cells genotypes from the timepoint runs. '''
+def getBnpCGenotype(tp_genotypes):
+    cell_genotype = []
+    for genFile in tp_genotypes:
+        t_df = pd.read_csv(genFile, sep='\t')
+        transposed_df = t_df.T
+        #print(transposed_df)
+        temp_genotype = transposed_df.values.tolist()[1:]
+        cell_genotype.extend(temp_genotype)
+    print(len(cell_genotype)," ",len(cell_genotype[0]))
+    return cell_genotype
+
 ''' Return the Tree with the highest prob from all the BnpC runs. '''
 # Input: m = no. of Bnpc runs, t = no. of timepoints, cLoc = clustering results location
 def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, tp_fp, tp_fn, plotOp, sample):
@@ -50,31 +70,51 @@ def getTreeWithHighestProb(m, t, cLoc, tp_MR, tpCells, D_matrix, k, tp_fp, tp_fn
     # Save the estimated error rates by the tree with the highest prob
     bnpc_FP = {}
     bnpc_FN = {}
+    # Save the BnpC runs to get the cell genotype later 
+    bnpc_run = {}
+    corrected_bnpc_cells = {}
+    corrected_bnpc_genotype = {}
     for i in range(1,m+1):
     #for i in range(1,2):
         #allClusters = cLoc+"/m"+str(i)+"/all/assignment.txt" # assignment.txt from BnpC run across all timepoints
         print("BnpC run ",i)
         tp_files = [] # save timepoint assignment.txt files
         tp_errors = [] # save timepoint FP FN rates
+        tp_genotypes = [] # BnpC genotypes from each timepoint run
         for j in t:
             tp_files.append(cLoc+"/m"+str(i)+"/"+j+"/assignment.txt")
             tp_errors.append(cLoc+"/m"+str(i)+"/"+j+"/errors.txt")
+            tp_genotypes.append(cLoc+"/m"+str(i)+"/"+j+"/genotypes_posterior_mean.tsv")
         print("Timepoint file ",tp_files)
         tp_alpha, tp_beta = readFPFNvalues(tp_errors)
+        bnpc_cells_genotype = getBnpCGenotype(tp_genotypes)
+        print("BnpC cells genotype ",bnpc_cells_genotype)
         print("Max TP alpha ",tp_fp)
         print("Max TP beta ",tp_fn)
         #sorted_cluster_prob, tp_reassignedCells, tp_updatedCG = intialClusterResults(tp_files, allClusters, tpCells, D_matrix, tp_alpha, tp_beta, tp_MR)
-        sorted_cluster_prob, tp_reassignedCells, tp_updatedCG = intialClusterResults(tp_files, "", tpCells, D_matrix, tp_alpha, tp_beta, tp_MR)
+        sorted_cluster_prob, tp_reassignedCells, tp_updatedCG = intialClusterResults(tp_files, "", tpCells, bnpc_cells_genotype, D_matrix, tp_alpha, tp_beta, tp_MR)
+        corrected_bnpc_cells[i] = copy.deepcopy(tp_reassignedCells)
+        corrected_bnpc_genotype[i] = copy.deepcopy(tp_updatedCG)
+        print("TP reassigned cells ",tp_reassignedCells)
+        print("TP updated CG ",tp_updatedCG)
         Tree, back_mut, tree_prob = selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, sorted_cluster_prob, tp_reassignedCells, tp_updatedCG, tpCells, k, tp_fp, tp_fn, plotOp, str(i), sample)
         bnpc_FP[tree_prob.copy()] = tp_alpha
         bnpc_FN[tree_prob.copy()] = tp_beta
+        bnpc_run[tree_prob.copy()] = i
+        #corrected_bnpc_cells[tree_prob.copy()] = corrected_cells
+        #corrected_bnpc_genotype[tree_prob.copy()] = corrected_genotype
         Tree_prob[tree_prob.copy()] = Tree.copy()
         Tree_backMut[tree_prob.copy()] = back_mut.copy()
     max_prob = max(Tree_prob)
     print(list(Tree_prob.keys()))
     print("Max prob ",max_prob)
+    print("BnpC run with max prob:",bnpc_run[max_prob])
     finalTree = Tree_prob[max_prob]
     finalBackMut = Tree_backMut[max_prob]
+    clonalCells = corrected_bnpc_cells[bnpc_run[max_prob]]
+    clonalGenotype = corrected_bnpc_genotype[bnpc_run[max_prob]]
+    saveDictFile(clonalCells, "TreeCSVs/"+plotOp+".cells.json")
+    saveDictFile(clonalGenotype, "TreeCSVs/"+plotOp+".clone_genotype.json")
     print("Max FP rates ",bnpc_FP[max_prob]," Max FN rates ",bnpc_FN[max_prob])
     #plotTree(finalTree, {}, finalBackMut,"plots/"+plotOp+"/smallSA501.pdf", "", sample)
     # plotTree will save the .pdf file ans saveTree will save the Tree in .csv 

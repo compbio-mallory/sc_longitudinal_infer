@@ -79,7 +79,7 @@ def listToDict(clusterList):
 # Input is an array of assignment.txt files from BnpC run for each timepoint, assignment.txt file for BnpC run across all timepoints,
 # cells in each timpoint. Output is a dictionary with cells clustered in each timepoint.
 def getNewClusters(tp_clustersF, all_clustersF, tpCells):
-    all_clusters = get_cell_cluster(all_clustersF)
+    #all_clusters = get_cell_cluster(all_clustersF)
     new_tp_clusters = {}
     if len(tp_clustersF) != len(tpCells):
         sys.exit("Your input number of timepoint clusters doesn't match the number of timepoints.")
@@ -165,19 +165,23 @@ def calcMaxLikelihood(cells, D_matrix, alpha, beta):
                 count1 = count1+1
                 #if j == 7 or j == 8 or j == 10:
                 #    print("Inside D=1  C_k0 ",C_k0," C_k1 ",C_k1)
-        if j == 7 or j == 11 or j == 12 or j == 17:
-            print(" C_k0 ",C_k0," C_k1 ",C_k1)
+        if j == 13 or j == 18:
+            print(j," C_k0 ",C_k0," C_k1 ",C_k1)
         # If there is a tie in no. of 0s and 1s and 3s then it is an unknown
-        if count0 == count1 or count3 == len(cells):
-            cluster_genotype.append(3) # we input 3 for unknowns as well
-        elif C_k0 > C_k1:
+        #if count0 == count1 or count3 == len(cells):
+        #    if j == 18:
+        #        print("Under unknown condn")
+        #    cluster_genotype.append(3) # we input 3 for unknowns as well
+        if C_k0 > C_k1:
             cluster_genotype.append(0)
-        elif C_k1 > C_k0:
+        elif C_k1 >= C_k0:
             cluster_genotype.append(1)
-        else:
+        #else:
+        #    if j == 18:
+        #        print("Under C_k0 == C_k1")
             # If C_k0 == C_k1 then randomly select 0 or 1
-            random_gen = random.randint(0, 1)
-            cluster_genotype.append(random_gen)
+        #    random_gen = random.randint(0, 1)
+        #    cluster_genotype.append(random_gen)
     #print(" Cluster genotype ",cluster_genotype)
     return cluster_genotype
 
