@@ -78,9 +78,9 @@ def getBnpcClonalGenotype(bnpc_cells_genotype, tp_cluster_cells):
     return bnpc_cluster_gen
 
 ''' After removing spurious subclones, reassigning cells we need to update cluster genotype. '''
-def correctClustering(bnpc_cells_genotype, tp_cluster_cells, tp_alpha, tp_beta, tp_cluster_gen, initialFlag):
+def correctClustering(bnpc_cells_genotype, D_matrix, tp_cluster_cells, tp_alpha, tp_beta, tp_cluster_gen, initialFlag):
     if initialFlag:
-        #tp_cluster_gen = updateTpClusterGen(bnpc_cells_genotype, tp_cluster_cells, tp_alpha, tp_beta)
+        #updateTpClusterGen(D_matrix, tp_cluster_cells, tp_alpha, tp_beta)
         tp_cluster_gen = getBnpcClonalGenotype(bnpc_cells_genotype, tp_cluster_cells)
     print(" TP cluster gen ",tp_cluster_gen)
     tp_mergedClusters, tp_updatedCG = checkClusterGenotype(tp_cluster_gen)
@@ -471,7 +471,7 @@ def clusteringResults(D_matrix, tp, tp_cluster_cells, tp_cluster_genotype, tp_al
     print(" Cluster Genotype before reassigning cells =============== ")
     printMutFromGenotype(tp_cluster_genotype[tp])
     # After cell reassigning get the updated corrected cluster genotype 
-    tp_cluster_cells, tp_cluster_genotype = correctClustering(D_matrix, tp_cluster_cells, tp_alpha, tp_beta, tp_cluster_genotype, False)
+    tp_cluster_cells, tp_cluster_genotype = correctClustering(D_matrix, D_matrix, tp_cluster_cells, tp_alpha, tp_beta, tp_cluster_genotype, False)
 
     # Check here if timepoint error rates differ a lot. If yes then return a value to prevent this subclone from dropping.
     # tp_alpha, tp_beta = alpha and beta from prev iteration.
@@ -526,7 +526,7 @@ def getNodeProb(spurious_subclone, cluster_nodes):
 
 ''' Select the tree with the highest probability. '''
 # Input is D_matrix, alpha and beta in each timepoint, cluster probabilities in each timepoint, cells in each cluster, cluster genotypes
-def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cluster_cells, tp_cluster_genotype, tpCells, k, tp_FPrate_threshold, tp_FNrate_threshold, plotOp, bnpcRun, sample):
+def selectOptimalTree(D_matrix, bnpc_cells_genotype, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cluster_cells, tp_cluster_genotype, tpCells, k, tp_FPrate_threshold, tp_FNrate_threshold, plotOp, bnpcRun, sample):
     Tree, clone_node = getTree(tp_cluster_cells, tp_cluster_genotype)
     #print(" Clone node ",clone_node)
     tree_prob = calculate_treeProb(tp_cluster_prob) 
@@ -625,7 +625,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
                 
                 new_backMut_edges = getBackMutCount(Tree)
 
-                new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, old_tp_FP, old_tp_FN, tp_MR)
+                new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, new_tp_FP, new_tp_FN, tp_MR)
                 print("After correction Iteration ",noOfiter," Clone node ",clone_node)
                 print("Tp_cluster_prob ",new_tp_cluster_prob)
 
@@ -700,7 +700,7 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
             print(" Before correction iteration ",noOfiter," Clone node ",clone_node)
         
             new_backMut_edges = getBackMutCount(Tree)
-            new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, old_tp_FP, old_tp_FN, tp_MR)
+            new_tp_cluster_prob = calc_cluster_prob(tp_cluster_cells, tp_cluster_genotype, D_matrix, new_tp_FP, new_tp_FN, tp_MR)
             print("After correction Iteration ",noOfiter," Clone node ",clone_node)
             print("Tp_cluster_prob ",new_tp_cluster_prob)
 
@@ -730,16 +730,18 @@ def selectOptimalTree(D_matrix, tp_alpha, tp_beta, tp_MR, tp_cluster_prob, tp_cl
     #plotTree(finalTree, {}, {},"plots/dummy.pdf", "Final Tree ", sample)
     # Fix the parallel and back mutation. After correction the tp_cluster_genotype will change.
     finalTree = recheckFinalTree(finalTree) # In this method try to fix the parallel and back mutations
-    plotTree(finalTree, {}, {},"plots/dummy.pdf", "Final Tree ", sample)
+    plotTree(finalTree, {}, {},"plots/dummy.pdf", "Tree before parallel and back mutation correction", sample)
     #finalTree, cg = correctParallelAndBackMut(D_matrix, finalClusterCells, finalClusterGen, tp_alpha, tp_beta, finalTree, finalCloneNode, k, plotOp, noOfiter, sample)
     finalTree, cg = correctParallelAndBackMut(D_matrix, finalClusterCells, finalClusterGen, final_tp_FP, final_tp_FN, finalTree, finalCloneNode, k, plotOp, noOfiter, sample)
+    final_tp_FP, final_tp_FN = timepointFPFN(bnpc_cells_genotype, finalClusterCells, cg)
+    print("Final FP after correction ",final_tp_FP," Final FN after correction ",final_tp_FN)
     #plotTree(finalTree, {}, {},"plots/"+plotOp+"/"+bnpcRun+"_Final_pbm.pdf", "Final Tree ", sample)
     finalTree = recheckFinalTree(finalTree)
     printTree(finalTree)
     plot_backMut_edges = getBackMutCount(finalTree)
     #plotTree(finalTree, {}, plot_backMut_edges,"plots/"+plotOp+"/"+bnpcRun+"_Final_ac.pdf", " ", sample)
     print("Final tree prob ",tree_prob)
-    return finalTree, plot_backMut_edges, tree_prob
+    return finalTree, plot_backMut_edges, tree_prob, final_tp_FP, final_tp_FN
 
 # Input is cells in each timepoint file.
 # Output a dictionary with timepoint as key and cells as value.
@@ -856,7 +858,7 @@ def intialClusterResults(tpClusters, allClusters, tpCells, bnpc_cells_genotype, 
     tp_cluster_cells = getNewClusters(tpClusters, allClusters, tpCells)
     # For initial clustering get the updated cluster genotype based on max likelihood
     print(" Initial clustering error rates used ",tp_alpha," ",tp_beta)
-    tp_reassignedCells, tp_updatedCG = correctClustering(bnpc_cells_genotype, tp_cluster_cells, tp_alpha, tp_beta, {}, True)
+    tp_reassignedCells, tp_updatedCG = correctClustering(bnpc_cells_genotype, D_matrix, tp_cluster_cells, tp_alpha, tp_beta, {}, True)
     tp_cluster_prob = calc_cluster_prob(tp_reassignedCells, tp_updatedCG, D_matrix, tp_alpha, tp_beta, tp_MR)
     print(" Initial Timepoint cluster prob ",tp_cluster_prob)
     sorted_cluster_prob = dict(sorted(tp_cluster_prob.items(), key=lambda item:item[1]))
