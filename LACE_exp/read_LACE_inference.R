@@ -6,6 +6,7 @@ load(args[1])
 B_tree = inference1['B']
 C_inf = inference1['C']
 clones_summary = inference1['clones_summary']
+corrected_genotypes = inference1['corrected_genotypes']
 
 #print(C_inf)
 #print(clones_summary)
@@ -21,10 +22,11 @@ clones_summary = inference1['clones_summary']
 #		}
 #	}
 #}
-
-B_JSON=toJSON(B_tree,pretty=TRUE,auto_unbox=TRUE)
-#C_JSON
-write(B_JSON,args[2])
+# Save B as a CSV
+write.csv(B_tree,args[2])
+# Save B as a JSON
+#B_JSON=toJSON(B_tree,pretty=TRUE,auto_unbox=TRUE)
+#write(B_JSON,args[2])
 
 C_JSON=toJSON(C_inf,pretty=TRUE,auto_unbox=TRUE)
 #C_JSON
@@ -33,3 +35,6 @@ write(C_JSON,args[3])
 clonesJSON=toJSON(clones_summary,pretty=TRUE,auto_unbox=TRUE)
 #clonesJSON
 write(clonesJSON,args[4])
+
+# Save cells genotypes
+write.csv(corrected_genotypes,args[5])

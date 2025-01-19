@@ -18,55 +18,61 @@ Computational tool to infer longitudinal tree for scDNAseq data
 
 ## <a name="clustering"></a>Clustering ##
 
-Since we used BnpC as a clustering algorithm in our pipeline for the evaluation we will briefly list the steps we followed:
-
-1. We process the noisy input matrix provided in ``` sample/input.D.csv ``` with the following scripts provided in ``` Clustering ```
-
-	``` python processSimInput.py -input $j -output outputFile.csv ```
-
-2. We run Bnpc on the processed input data and get the consensus genotype using the following script:
-
-	``` python gen_bnpc_getGmatrix.py -cc assignment.txt -gp BnpCs_genotypes_posterior_mean.tsv -celltp sample/cellsInSubclones.csv -op consensus_genotype.tsv ```
-
-3. You can also run your own clustering algorithm and get a cluster assignment file similar to assignment.txt and a consensus genotype similar to one provided in ``` Clustering```
+We used BnpC as a clustering algorithm and used their results from multiple runs as an input to our algorithm.
 
 ## <a name="scLongTree"></a>scLongTree ## 
 
-To run the algorithm we have all the necessary scripts in ``` algorithm ``` and sample inputs in ``` sample ```. The below steps will be explained with scripts provided in these folders.
+To run the algorithm we have included all scripts in ``` algorithm ``` and sample inputs are in ``` sample ```. The below steps will be explained with scripts provided in these folders.
 
-1. Once we have the clustering results we will stratify it across timepoints with the following script:
+1. We can run scLongTree using the below command:
 
-	``` python algorithm/inputForTree.py -cc Clustering/assignment.txt -cg Clustering/consensus_genotype.tsv -sim false -celltp sample/cellsInSubclones.csv -op consensus_genotype_withTimepoints.csv -ccop cluster_cell.npy ```
+	``` python algorithm/selectBestTree.py -m 5 -t t1 t2 t3 -loc sample/bnpc_runs -cells sample/cell_timepoints.csv -D sample/input.D.csv -k 0 -op output ```
+	
+	Parameters:
 
-2. Next we run our algorithm to infer the longitudinal tree:
-
-	``` python algorithm/longitudinalTree.py -input consensus_genotype_withTimepoints.csv -cg Clustering/consensus_genotype.tsv -cc cluster_cell.npy -D sample/input.D.csv -celltp sample/cellsInSubclones.csv -sim false -op_tree inferredTree.csv -cloneNode cloneNode.npy -cloneCells cloneCells.npy ```
-
-3. Now, given that we run the algorithm multiple times we select the best tree with following script. You can pass n no. of trees as an argument. I passed three trees below as arguments:
-
-	``` python selectBestClusterAndTree.py -tree inferredTree1.csv inferredTree2.csv inferredTree3.csv ```
+	* ```-m``` number of BnpC runs.
+	* ```-t``` different timepoints.
+	* ```-loc``` file path having BnpC runs.
+	* ```-cells``` file describing cells belonging to each timepoint.
+	* ```-D``` input genotype matrix with cells as rows and mutations as columns.
+	* ```-k``` value of k for k-Dollo model.
+	* ```-op``` output file path to save the results.
 
 ## <a name="snvAccuracy"></a>Calculating SNV accuracy ##
 
-1. Given the results we evaluate based on placement of SNVs on the tree. Since the tree inferred is different for each tool we used the following scripts for each respective trees to get the pair of SNVS for ancestral, on same branch and incomparable/parallel:
+1. Given the results we evaluate based on placement of SNVs on the tree. Since the tree inferred is different for each tool we used the following scripts for each respective trees to get the pair of SNVS for ancestral, on same branch and parallel:
 
-	scLongTree: ``` python algorithm/getSNVrelations.py -tree inferredTree.csv -output outputFileLoc ```
+	scLongTree: ``` python algorithm/scLongTree_getSNVrelations.py -tree output/tree.csv -output outputFilePath ```
 
-	LACE:	``` python LACE_exp/getSNVrelations.py -B lace_B.json -output outputFileLoc ```
+	LACE:	``` python LACE_exp/getSNVrelations.py -B lace_B.csv -output outputFilePath ```
 
-	SCITE: ``` python SCITE_exp/getSNVpairs.py -tree sciteTree.gv -output outputFileLoc ```
+	SCITE: ``` python SCITE_exp/getSNVrelations.py -tree sciteTree.gv -output outputFilePath ```
 
-	SiCloneFit: ``` python SiCloneFit_exp/getSNVpairs.py -tree best_MAP_tree.txt -genotype best_MAP_predicted_genotype.txt -output outputFileLoc ```
+	SiCloneFit: ``` python SiCloneFit_exp/getSNVrelations.py -tree best_MAP_tree.txt -genotype best_MAP_predicted_genotype.txt -output outputFileLoc ```
 	
 ## <a name="evaluation"></a>Evaluation ##
 
 1. Given the pair of SNVs we get the SNV pair accuracy by running the following script:
 
-	``` python evaluation/evaluateSNVpairs.py -gt groundTruth_locationOf_SavedSNVpairs -scLongTree locationOf_SavedSNVpairs -siclonefit locationOf_SavedSNVpairs -scite locationOf_SavedSNVpairs -lace locationOf_SavedSNVpairs ```
+	``` python evaluation/evaluateSNVpairs.py -gt sample/gtSNVpairs -scLongTree sample/scLongTreeSNVpairs -siclonefit sample/siclonefitSNVpairs -scite sample/sciteSNVpairs -lace sample/laceSNVpairs ```
+
+	Parameters:
+
+	* ```-gt``` File path for SNV pairs from groud truth Tree.
+	* ```-scLongTree``` File path for SNV pairs from scLongTree's inferred tree.
+	* ```-siclonefit``` File path for SNV pairs from SiCloneFit's inferred tree.
+	* ```-scite``` File path for SNV pairs from SCITE's inferred tree.
+	* ```-lace``` File path for SNV pairs from LACE's inferred tree.
 
 2. We calculate the precision and recall for LACE and scLongTree:
 
-	``` python calculate_PrecisionRecall.py -mut sample/clone_mut.csv -gtTree groundTruthTree -lgTree inferredTree -lace true/false ```
+	``` python evaluation/calculate_PrecisionRecall.py -mut sample/clone_mut.csv -gtTree sample/groundTruthTree.csv -lgTree sample/inferredTree.csv ```
+	
+	Parameters:
+
+	* ```-mut``` ground truth mutations of each clones.
+	* ```-gtTree``` ground truth Tree.
+	* ```-lgTree``` longitudinal tree inferred by the algorithms.
 
 ## <a name="simulation"></a>Simulation ##
 
@@ -84,7 +90,7 @@ To run the algorithm we have all the necessary scripts in ``` algorithm ``` and 
    * ```-v2``` condition variable to decide distribution of mutations.
    * ```-u``` condition variable deciding unobserved subclones.
    * ```-B``` beta split variable.
-   * ```-theta``` condition variable to decide if a subclone should have new mutations.
+   * ```-theta``` condition variable deciding new mutations for subclones.
    * ```-o``` output file.
 
 3. Once we have the tree we can assign cells, mutations and include false positives, false negatives, missing data using the following script:
@@ -98,5 +104,5 @@ To run the algorithm we have all the necessary scripts in ``` algorithm ``` and 
    * ```-t``` timepoints.
    * ```-mc``` mutation rate.
    * ```-f``` the tree generated earlier using number of leaves and beta splitting variable.
-   * ```-P``` the prefix and directory for output files.
+   * ```-P``` the prefix and file path for output files.
 

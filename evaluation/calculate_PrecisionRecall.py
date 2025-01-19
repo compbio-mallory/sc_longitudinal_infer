@@ -44,7 +44,7 @@ def get_tp_node(gtTree):
 ''' Update node mutations where if the mutations are same as its parent then its edge will have 0 mutations. '''
 def update_node_mut(gt_node_mut,child_parent):
     for child, parent in child_parent.items():
-        if int(child) == 0:
+        if int(child) == 0 or parent == '-2':
             continue
         child_mut = gt_node_mut[child]
         if ',' in parent:
@@ -103,7 +103,7 @@ def get_tp_mutations(node_mut, node_timepoint, dead_nodes):
             mut_list = []
             mut_list.extend(mut)
             tp_mutations[key] = mut_list
-    #print(" Time point mutations ",tp_mutations.keys())
+    #print(" Time point mutations ",tp_mutations)
     map_tp = map_timepoints(set(tp_mutations.keys()))
 
     union_tp_mutations = {}
@@ -126,6 +126,30 @@ def get_tp_mutations(node_mut, node_timepoint, dead_nodes):
     #print(" Union tp mutations ",union_tp_mutations)
     return union_tp_mutations
 
+''' Get mutations from inferred tree using scLongTree '''
+def get_lgTree_tp_mutations(node_mut, node_timepoint):
+    tp_mutations = {}
+    print("Inside get_lgTree_tp_mutations ")
+    for node, timepoint in node_timepoint.items():
+        mut = node_mut[node]
+        if mut == []:
+            continue
+        #print("Node ",node," Timepoint ",timepoint," Mut ",mut)
+        if int(timepoint) == 0:
+            if '1_2' in tp_mutations:
+                tempMut = tp_mutations['1_2'].union(set(mut))
+                tp_mutations['1_2'] = tempMut
+            else:
+                tp_mutations['1_2'] = set(mut) 
+        elif int(timepoint) == 1:
+            if '2_3' in tp_mutations:
+                tempMut = tp_mutations['2_3'].union(set(mut))
+                tp_mutations['2_3'] = tempMut
+            else:
+                tp_mutations['2_3'] = set(mut)
+    print(tp_mutations)
+    return tp_mutations
+
 ''' Read the inferred tree and save the mutations, parent node and timepoints. '''
 def read_inferred_tree(lgTree):
     file = open(lgTree,'r')
@@ -133,18 +157,26 @@ def read_inferred_tree(lgTree):
     node_mut = {}
     node_timepoint = {}
     child_parent = {}
+    firstLine = True
     while(line != ""):
+        if firstLine: # Skip the header line
+            firstLine = False
+            line = file.readline().rstrip('\n')
+            continue
         line_a = line.split('\t')
         node = line_a[0]
-        timepoint = line_a[1]
+        timepoint = line_a[2]
         node_timepoint[node] = timepoint
-        parent = line_a[2]
+        parent = line_a[1]
         child_parent[node] = parent
         if node == '0':
             node_mut[node] = []
         else:
             mut = line_a[4].split(',')
-            node_mut[node] = mut
+            if mut == ['']:
+                node_mut[node] = []
+            else:
+                node_mut[node] = mut
         line = file.readline().rstrip('\n')
     return node_mut, node_timepoint, child_parent
 
@@ -278,7 +310,7 @@ parser.add_argument("-gtTree", "--gtTree",dest ="gtTree", help="Ground truth tre
 parser.add_argument("-lgTree","--lgTree",dest="lgTree", help="Longitudinal tree inferred from the algorithm")
 parser.add_argument("-cg","--cg",dest="cg", help="BnpC's inferred Gprime or consensus genotype")
 parser.add_argument("-clone","--clone",dest="clone", help="Clones mapped to the inferred longitudinal tree")
-parser.add_argument("-lace","--lace",dest="lace", help="LACE file is passed or not for evaluation. Value is true or false.")
+parser.add_argument("-lace","--lace",dest="lace", default="false", help="LACE file is passed or not for evaluation. Value is true or false.")
 parser.add_argument("-laceFile","--laceFile",dest="laceFile", help="LACE file having the mutations in each timepoint")
 args = parser.parse_args()
 
@@ -299,7 +331,7 @@ print(" Node mut ",lg_node_mut)
 #print(" Node child parent ",lg_child_parent)
 updated_lg_node_mut = update_node_mut(lg_node_mut, lg_child_parent)
 print(" Updated lg mut ",updated_lg_node_mut)
-lg_tp_mutations = get_tp_mutations(updated_lg_node_mut, lg_node_timepoint, [])
+lg_tp_mutations = get_lgTree_tp_mutations(updated_lg_node_mut, lg_node_timepoint)
 print(" LG mutations ",lg_tp_mutations)
 
 #clones_nodes = np.load(args.clone,allow_pickle='TRUE').item() # Clones mapped to the inferred tree nodes.

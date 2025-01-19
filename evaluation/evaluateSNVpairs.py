@@ -27,15 +27,34 @@ def convertSetsToLists(givenSet):
     return convertedList
 
 ''' Correct number of SNVs when compared with ground truth. '''
+#def correctSNVs(gt_list, other_list, SNVtype):
+#    correct_pairs = 0
+#    gt_list_len = len(gt_list)
+#    for g in gt_list:
+#        for o in other_list:
+#            if (g[0] == o[0] or g[0] == o[1]) and (g[1] == o[1] or g[1] == o[0]):
+            #if g[0] == o[0] and g[1] == o[1]:
+#                     correct_pairs = correct_pairs+1
+                     #print(g," ---- ",o)
+#    print(" Correct pairs ",correct_pairs," GT len ",gt_list_len)
+#    if gt_list_len == 0:
+#        correctSNVs_perc = 0
+#    else:
+#        correctSNVs_perc = (correct_pairs/gt_list_len) * 100
+#    print(SNVtype+" = "+str(round(correctSNVs_perc)))
+#    return correct_pairs, gt_list_len
+
+''' Correct number of SNVs when compared with ground truth. '''
 def correctSNVs(gt_list, other_list, SNVtype):
     correct_pairs = 0
     gt_list_len = len(gt_list)
     for g in gt_list:
-        for o in other_list:
-            if (g[0] == o[0] or g[0] == o[1]) and (g[1] == o[1] or g[1] == o[0]):
-            #if g[0] == o[0] and g[1] == o[1]:
-                     correct_pairs = correct_pairs+1
-                     #print(g," ---- ",o)
+        possible_pair1 = [g[0]]
+        possible_pair1.append(g[1])
+        possible_pair2 = [g[1]]
+        possible_pair2.append(g[0])
+        if possible_pair1 in other_list or possible_pair2 in other_list:
+            correct_pairs = correct_pairs+1
     print(" Correct pairs ",correct_pairs," GT len ",gt_list_len)
     if gt_list_len == 0:
         correctSNVs_perc = 0
@@ -43,7 +62,6 @@ def correctSNVs(gt_list, other_list, SNVtype):
         correctSNVs_perc = (correct_pairs/gt_list_len) * 100
     print(SNVtype+" = "+str(round(correctSNVs_perc)))
     return correct_pairs, gt_list_len
-
 #def compareSameSNVs(gt_sameSNVs_list, other_sameSNVs_list):
 
 #def compareAncestralSNVs(gt_ancestralSNVs_list, other_ancestralSNVs):
@@ -70,9 +88,9 @@ try:
 except:
         print(" SiCloneFit file not found. ")
 
-scLongTree_sameSNVs = read_files(args.scLongTree+"_sameSNVs.txt")
-scLongTree_ancestralSNVs = read_files(args.scLongTree+"_ancestralSNVs.txt")
-scLongTree_parallelSNVs = read_files(args.scLongTree+"_inComSNVs.txt")
+scLongTree_sameSNVs = read_files(args.scLongTree+"/sameSNVs.txt")
+scLongTree_ancestralSNVs = read_files(args.scLongTree+"/ancestralSNVs.txt")
+scLongTree_parallelSNVs = read_files(args.scLongTree+"/inComSNVs.txt")
 
 try:
     scite_sameSNVs = read_files(args.scite+"/sameSNVs.txt")

@@ -1,3 +1,6 @@
+# Author: Rituparna Khan
+# This file can be used to annotate simulated data for LACE's input
+
 import argparse
 
 def get_header(mutations):

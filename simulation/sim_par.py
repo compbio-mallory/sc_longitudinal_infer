@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-@authors: Xian Fan Mallory
+@authors: Rituparna Khan
 Contacting email: fan@cs.fsu.edu
 """
 
