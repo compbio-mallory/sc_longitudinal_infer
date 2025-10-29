@@ -173,7 +173,7 @@ def distribute_SNVcells(cell_n, tree_f, out_f):
     print_dict(SNVcell_dict, out_f)
     return SNVcell_dict, prev_cell + 1
 
-# ------------------------------- Baseline mutations (legacy) -------------------------------
+# ------------------------------- Baseline mutations -------------------------------
 
 def draw_base_mutations(children, edge_len, mc, rng_np, node_info):
     """
@@ -198,26 +198,26 @@ def draw_base_mutations(children, edge_len, mc, rng_np, node_info):
                 next_id += k
     return node_new, next_id
 
-# ------------------------------- NEW -------------------------------
+# ------------------------------- Parallel: helpers -------------------------------
 
 def pick_incomparable_extras(all_nodes, ancestors, already, need_k, rng_np):
     """
-     pick up to k nodes that are incomparable to all in 'already'.
+    Pick up to need_k nodes that are incomparable to *every* node
+    already chosen (including previously picked extras).
+    Greedy but works well for our sizes.
     """
-    if need_k <= 0: return []
+    if need_k <= 0:
+        return []
     cand = list(all_nodes)
     rng_np.shuffle(cand)
-    extras = []
+    chosen = []                     # extras picked so far
     for v in cand:
-        ok = True
-        for u in already:
-            if not incomparable(u, v, ancestors):
-                ok = False; break
-        if ok:
-            extras.append(v)
-            if len(extras) == need_k:
+        # compare against base origins + already-chosen extras
+        if all(incomparable(v, u, ancestors) for u in (already + chosen)):
+            chosen.append(v)
+            if len(chosen) == need_k:
                 break
-    return extras
+    return chosen
 
 def inject_new_mutations(n_new, p_extra, non_root_nodes, ancestors, rng_np, node_new, next_id):
     """
@@ -233,27 +233,77 @@ def inject_new_mutations(n_new, p_extra, non_root_nodes, ancestors, rng_np, node
 
     all_nodes = list(non_root_nodes)
     if not all_nodes or n_new <= 0:
-        return parallel_origins, next_id
+        return parallel_origins, next_id, []
 
+    new_ids = []
     for _ in range(n_new):
-        # base origin
         base = rng_np.choice(all_nodes)
         origins = [base]
-
-        # add up to p_extra incomparable extras...example if p=1 then there will be parallel mutation placed in 1 more edge which incomparable to nodes in origins. 
         extras = pick_incomparable_extras(all_nodes, ancestors, origins, p_extra, rng_np)
         origins.extend(extras)
 
-        # place the new mutation
         mid = next_id; next_id += 1
+        new_ids.append(mid)
         for node in origins:
             node_new[node].append(mid)
-
-        # to write in parallel.csv file we can only write when there are >=2 mutations occur parallely. 
         if len(origins) >= 2:
             parallel_origins[mid] = set(origins)
 
-    return parallel_origins, next_id
+    return parallel_origins, next_id, new_ids
+
+# ------------------------------- Back: helpers -------------------------------
+
+def compute_descendants(children, nodes):
+    """ descendants[v] = set of descendants (excluding v) """
+    descendants = {v:set() for v in nodes}
+    # BFS from each node
+    for v in nodes:
+        q = deque(children.get(v, []))
+        while q:
+            u = q.popleft()
+            descendants[v].add(u)
+            for w in children.get(u, []):
+                q.append(w)
+    return descendants
+
+def pick_losses_in_subtree(origin_child, back_k, descendants, ancestors, rng_np):
+    """
+    Choose up to back_k child-nodes (edges) under origin_child such that all selected
+    losses are pairwise incomparable (i.e., no ancestor/descendant among them).
+    """
+    subs = list(descendants.get(origin_child, set()))
+    if back_k <= 0 or not subs:
+        return []
+    rng_np.shuffle(subs)
+    chosen = []
+    for v in subs:
+        if all(incomparable(v, u, ancestors) for u in chosen):
+            chosen.append(v)
+            if len(chosen) == back_k:
+                break
+    return chosen
+
+def apply_back_losses(node_all, children, back_origin_losses, parent):
+    """
+    Remove mutation mid from all nodes in the subtrees rooted at each loss child.
+    back_origin_losses: { mid -> (origin_child, [loss_child,...]) }
+    """
+    # map child -> list of all descendants including itself
+    def subtree_nodes(start):
+        out = []
+        q = deque([start])
+        while q:
+            u = q.popleft()
+            out.append(u)
+            for v in children.get(u, []):
+                q.append(v)
+        return out
+
+    for mid, (origin_child, losses) in back_origin_losses.items():
+        for loss_child in losses:
+            for v in subtree_nodes(loss_child):
+                if mid in node_all.get(v, set()):
+                    node_all[v].discard(mid)
 
 # ------------------------------- Propagation -------------------------------
 
@@ -291,6 +341,21 @@ def write_parallel(prefix, parallel_origins):
             if nodes:
                 f.write(f"{mid}\t{';'.join(str(n) for n in nodes)}\n")
     return out_f
+
+def write_back(prefix, back_set, back_origin_losses):
+    # list of back mutation IDs (one per line)
+    out_ids = prefix + ".back.csv"
+    with open(out_ids, "w") as f:
+        for mid in sorted(back_set):
+            f.write(f"{mid}\n")
+    # mid \t origin_child \t loss1;loss2;...
+    out_map = prefix + ".back_origin.csv"
+    with open(out_map, "w") as f:
+        for mid in sorted(back_origin_losses.keys()):
+            origin_child, losses = back_origin_losses[mid]
+            loss_str = ";".join(str(x) for x in sorted(losses)) if losses else ""
+            f.write(f"{mid}\t{origin_child}\t{loss_str}\n")
+    return out_ids, out_map
 
 # ------------------------------- G / D matrix (legacy) -------------------------------
 
@@ -357,31 +422,29 @@ def mutation_matrix(node_all, SNVcell_dict, tree_f, n, m, missingP, alpha, beta,
 def main():
     if len(sys.argv) <= 1:
         print("""
-    This generates the mutation matrix with the ground truth data.
-    Usage: python sim_par_1.py -a [alpha] -b [beta] -m [missing-rate] -t [timepoints] -mc [mut_const]
-                               -f [input-tree-file] -P [prefix-output-files]
-                               -n [new-muts] -p [parallel-edges]
-        -a (--alpha)        False positive rate. [0.01]
-        -b (--beta)         False negative rate. [0.2]
-        -m (--missing_rate) Missing rate in G. [0.2]
-        -t (--timepoints)   Number of timepoints in tree. [3]
-        -mc (--mut_const)   Poisson scale for baseline Mut==True edges (lam = EL * mc). [1.7]
-        -f (--tree_file)    Input tree file from gen_tree.py.
-        -P (--prefix)       Prefix of output files.
+Generate simulated data with controlled NEW parallel & back mutations.
 
-        -n (--new-muts)     Number of NEW mutation IDs to add (Option A). [3]
-        -p (--parallel-edges)
-                            Number of EXTRA parallel origins per new mutation (total=1+p). [0]
-        --seed              RNG seed (NumPy & Python). [1]
+Usage: python sim_par_1.py -f tree.csv -P prefix [options]
 
-    Notes:
-      * If p=0, we still add new mutations (one edge each), but parallel.csv is empty.
-      * -L is accepted for backward compatibility and maps to -p.
-    """)
+Parallel knobs:
+  -n/--new-muts INT           number of NEW mutations to add [3]
+  -p/--parallel-edges INT     EXTRA parallel origins per new mut (total = 1+p) [0]
+  --par-pct FLOAT             instead of -n, use percentage of baseline muts (rounded)
+
+Back knobs (operate on NEW mutations only):
+  --back-n INT                number of NEW muts to back-mutate [0]
+  --back-k INT                max pairwise-incomparable loss edges per back mut [0]
+  --back-pct FLOAT            instead of --back-n, use percentage of baseline muts
+
+these are kept as it is :
+  -a --alpha, -b --beta, -m --missing_rate, -t --timepoints, -mc --mut_const
+  -G --Gmatrix, -cellstp --cellstp, -FPFN --fpfn
+  -L (deprecated alias for -p)
+  --seed INT
+""")
         sys.exit(0)
 
-    parser = argparse.ArgumentParser(description='Generate simulated data with controlled NEW parallel mutations (Option A).')
-    # legacy knobs
+    parser = argparse.ArgumentParser(description='Generate simulated data with controlled NEW parallel & back mutations.')
     parser.add_argument('-a', '--alpha', type=float, default=0.01)
     parser.add_argument('-b', '--beta', type=float, default=0.2)
     parser.add_argument('-m', '--missing_rate', type=float, default=0.2)
@@ -392,17 +455,19 @@ def main():
     parser.add_argument('-P', '--prefix', required=True)
     parser.add_argument('-G', '--Gmatrix', default="NA")
     parser.add_argument('-cellstp', '--cellstp', default="NA")
-    # NEW knobs
+    # parallel knobs
     parser.add_argument('-n', '--new-muts', type=int, default=3, dest='new_muts')
     parser.add_argument('-p', '--parallel-edges', type=int, default=0, dest='parallel_edges')
-    parser.add_argument('-L', type=int, default=None, help='[deprecated] maps to --parallel-edges')
-    parser.add_argument('--seed', type=int, default=1, help='random seed')
+    parser.add_argument('--par-pct', type=float, default=None, dest='par_pct')
+    # back knobs
+    parser.add_argument('--back-n', type=int, default=0, dest='back_n')
+    parser.add_argument('--back-k', type=int, default=0, dest='back_k')
+    parser.add_argument('--back-pct', type=float, default=None, dest='back_pct')
+    # seed
+    parser.add_argument('--seed', type=int, default=1)
+
     args = parser.parse_args()
 
-    # Back-compat: map -L -> -p
-    if args.L is not None:
-        print(f"[warn] -L is deprecated; mapping L={args.L} to --parallel-edges.")
-        args.parallel_edges = int(args.L)
 
     alpha = float(args.alpha)
     beta  = float(args.beta)
@@ -412,6 +477,10 @@ def main():
     prefix = args.prefix
     n_new = int(args.new_muts)
     p_extra = int(args.parallel_edges)
+    back_n = int(args.back_n)
+    back_k = int(args.back_k)
+    par_pct = args.par_pct
+    back_pct = args.back_pct
 
     # RNGs compatible with old NumPy installs
     rng_np = np.random.RandomState(args.seed)
@@ -433,9 +502,16 @@ def main():
     # 1) Baseline new mutations per Mut flag
     node_new, next_id = draw_base_mutations(children, edge_len, mc, rng_np, node_info)
 
-    # 2) Inject NEW mutations with p-extra parallel edges each 
+    # If pct knobs provided, map to counts using baseline total
+    baseline_total = (max((max(s) if s else -1) for s in node_new.values()) + 1) if node_new else 0
+    if par_pct is not None:
+        n_new = max(0, int(round(baseline_total * float(par_pct) / 100.0)))
+    if back_pct is not None:
+        back_n = max(0, int(round(baseline_total * float(back_pct) / 100.0)))
+
+    # 2) Inject NEW mutations with p-extra parallel edges each
     ancestors = compute_ancestors(parent, nodes)
-    parallel_origins, next_id = inject_new_mutations(
+    parallel_origins, next_id, new_ids = inject_new_mutations(
         n_new=n_new,
         p_extra=p_extra,
         non_root_nodes=non_root_nodes,
@@ -445,18 +521,57 @@ def main():
         next_id=next_id
     )
 
-    # 3) Propagate to get full sets at nodes
+    # 3) Propagate (pre-back) to get full sets at nodes
     node_all = propagate_to_descendants(root_id, children, node_new)
 
-    # 4) Write mut + parallel (ground truth)
+    # 4) Back-mutations **only on NEW IDs** (subset of new_ids)
+    back_set = set()
+    back_origin_losses = {}  # mid -> (origin_child, [loss_child,...])
+
+    if back_n > 0 and new_ids:
+        # pick up to back_n from new_ids (deterministic-ish via RNG)
+        ids_pool = list(new_ids)
+        rng_np.shuffle(ids_pool)
+        pick = ids_pool[:min(back_n, len(ids_pool))]
+
+        # For each chosen mid, decide an origin (where it was introduced) and pick losses
+        # We map mid -> set(origin nodes) from node_new (origins are the nodes that contain mid but NOT its parent)
+        # construct origin lookup
+        origins_by_mid = defaultdict(list)
+        for v, ids in node_new.items():
+            for mid in ids:
+                origins_by_mid[mid].append(v)
+
+        descendants = compute_descendants(children, nodes)
+
+        for mid in pick:
+            # choose one origin_child among origins (there is always >=1)
+            olist = origins_by_mid.get(mid, [])
+            if not olist:
+                continue
+            origin_child = rng_np.choice(olist)
+
+            # choose up to back_k incomparable losses inside the subtree of origin_child
+            losses = pick_losses_in_subtree(origin_child, back_k, descendants, ancestors, rng_np)
+
+            back_set.add(mid)
+            back_origin_losses[mid] = (origin_child, losses)
+
+        # Apply removals
+        apply_back_losses(node_all, children, back_origin_losses, parent)
+
+    # 5) Write mut/parallel/back (ground truth)
     mut_f = write_mut(prefix, node_all)
     par_f = write_parallel(prefix, parallel_origins)
+    back_ids_f, back_map_f = write_back(prefix, back_set, back_origin_losses)
     total_muts = len(set(m for s in node_all.values() for m in s))
-    print("Total unique mutations written:", total_muts)
+    print("Total unique mutations (after parallel+back):", total_muts)
     print("Wrote:", mut_f)
     print("Wrote:", par_f)
+    print("Wrote:", back_ids_f)
+    print("Wrote:", back_map_f)
 
-    # 5) Cells + G/D (legacy)
+    # 6) Cells + G/D (legacy)
     cell_n = sampleCells(args.timepoints, rng_py)
     print(" Assigned cells ", cell_n)
     SNVcell_f = prefix + ".SNVcell.csv"
