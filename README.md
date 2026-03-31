@@ -36,7 +36,7 @@ To run the algorithm we have included all scripts in ``` algorithm ``` and sampl
 	* ```-cells``` file describing cells belonging to each timepoint.
 	* ```-D``` input genotype matrix with cells as rows and mutations as columns.
 	* ```-k``` value of k for k-Dollo model.
-	* ```-p``` Max extra parallel mutations. Total allowed occurrences = 1 + P.
+	* ```-p``` Max extra parallel mutations. Total allowed occurrences = 1 + p.
 	* ```-op``` output file path to save the results.
 
 ## <a name="snvAccuracy"></a>Calculating SNV accuracy ##
